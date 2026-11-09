@@ -71,11 +71,14 @@ fun LearnMateApp() {
         }
     } else {
         val currentProfile = profile!!
+        val strings = remember(currentProfile.preferredLanguage) {
+            StringsManager.getStrings(currentProfile.preferredLanguage)
+        }
         val tabs = listOf(
-            NavTab("Home", Icons.Default.Home),
-            NavTab("Roadmap", Icons.Default.Map),
-            NavTab("AI Mentor", Icons.Default.AutoAwesome),
-            NavTab("Perf", Icons.Default.Speed)
+            NavTab(strings.tabHome, Icons.Default.Home),
+            NavTab(strings.tabRoadmap, Icons.Default.Map),
+            NavTab(strings.tabMentor, Icons.Default.AutoAwesome),
+            NavTab(strings.tabPerf, Icons.Default.Speed)
         )
 
         Scaffold(
@@ -105,7 +108,7 @@ fun LearnMateApp() {
                             },
                             label = {
                                 Text(
-                                    text = "100% Offline",
+                                    text = strings.offlineBadge,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color(0xFF0F766E)
@@ -123,7 +126,7 @@ fun LearnMateApp() {
                             selected = selectedTab == index,
                             onClick = { selectedTab = index },
                             icon = { Icon(imageVector = tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label, fontSize = 12.sp) }
+                            label = { Text(tab.label, fontSize = 11.sp, maxLines = 1) }
                         )
                     }
                 }
@@ -138,6 +141,7 @@ fun LearnMateApp() {
                 when (selectedTab) {
                     0 -> HomeDashboardTab(
                         profile = currentProfile,
+                        strings = strings,
                         onNavigate = { tabIndex -> selectedTab = tabIndex },
                         onResetProfile = {
                             ProfileStorage.clearProfile(context)
@@ -156,6 +160,7 @@ fun LearnMateApp() {
 @Composable
 fun HomeDashboardTab(
     profile: StudentProfile,
+    strings: UiStrings,
     onNavigate: (Int) -> Unit,
     onResetProfile: () -> Unit
 ) {
@@ -173,7 +178,7 @@ fun HomeDashboardTab(
         ) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "Welcome back, ${profile.name}!",
+                    text = "${strings.welcomeBack}, ${profile.name}!",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -200,7 +205,7 @@ fun HomeDashboardTab(
         }
 
         // Quick Actions
-        Text("Quick Actions", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text(strings.quickActions, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -216,8 +221,8 @@ fun HomeDashboardTab(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary
                     )
-                    Text("Study Roadmap", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text("Diagnostic & daily plan", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(strings.studyRoadmap, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(strings.diagnosticDesc, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -232,8 +237,8 @@ fun HomeDashboardTab(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.secondary
                     )
-                    Text("AI Mentor", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text("Ask doubts offline", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(strings.aiMentor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(strings.askDoubtsDesc, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -250,7 +255,7 @@ fun HomeDashboardTab(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary
                     )
-                    Text("Learning Profile", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(strings.learningProfile, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
                 HorizontalDivider()
                 Text("Daily Study: ${profile.dailyHours} hrs/day", fontSize = 14.sp)
@@ -265,7 +270,7 @@ fun HomeDashboardTab(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text("Edit / Reset Profile")
+            Text(strings.resetProfile)
         }
     }
 }
