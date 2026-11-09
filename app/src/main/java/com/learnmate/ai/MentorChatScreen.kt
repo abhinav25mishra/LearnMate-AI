@@ -20,7 +20,7 @@ data class ChatMessage(
 @Composable
 fun MentorChatScreen(
     profile: StudentProfile,
-    mentorEngine: AiMentorEngine = MockAiMentorEngine
+    mentorEngine: AiMentorEngine = LocalLlamaEngine
 ) {
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }

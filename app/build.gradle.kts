@@ -8,6 +8,9 @@ android {
     compileSdk = 34
 
     defaultConfig {
+        ndk {
+    abiFilters += listOf("arm64-v8a", "x86_64")
+}
         applicationId = "com.learnmate.ai"
         minSdk = 26
         targetSdk = 34
@@ -35,6 +38,7 @@ android {
 
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+    implementation("org.pytorch:executorch-android:1.0.0")
     implementation(composeBom)
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.0")
