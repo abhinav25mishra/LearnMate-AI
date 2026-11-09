@@ -6,18 +6,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
 fun RoadmapScreen(profile: StudentProfile) {
+    val context = LocalContext.current
     val questions = remember(profile.subject) {
         LearningEngine.getDiagnosticQuestions(profile.subject)
     }
     var selectedAnswers by remember { mutableStateOf(emptyMap<Int, Int>()) }
-    var gapReport by remember { mutableStateOf<KnowledgeGapReport?>(null) }
-    var roadmap by remember { mutableStateOf(emptyList<RoadmapModule>()) }
+    var gapReport by remember { mutableStateOf(AppStorage.loadGapReport(context)) }
+    var roadmap by remember { mutableStateOf(AppStorage.loadRoadmap(context)) }
 
     Column(
         modifier = Modifier
@@ -62,8 +64,10 @@ fun RoadmapScreen(profile: StudentProfile) {
             Button(
                 onClick = {
                     val report = LearningEngine.evaluateDiagnostic(questions, selectedAnswers)
+                    val newRoadmap = LearningEngine.generateRoadmap(profile, report)
                     gapReport = report
-                    roadmap = LearningEngine.generateRoadmap(profile, report)
+                    roadmap = newRoadmap
+                    AppStorage.saveRoadmapData(context, report, newRoadmap)
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
@@ -99,16 +103,20 @@ fun RoadmapScreen(profile: StudentProfile) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
                                 onClick = {
-                                    roadmap = roadmap.map {
+                                    val updated = roadmap.map {
                                         if (it.id == module.id) it.copy(isCompleted = !it.isCompleted) else it
                                     }
+                                    roadmap = updated
+                                    AppStorage.saveRoadmapData(context, report, updated)
                                 }
                             ) {
                                 Text(if (module.isCompleted) "✅ Completed" else "Mark Complete")
                             }
                             TextButton(
                                 onClick = {
-                                    roadmap = LearningEngine.adaptRoadmapForStruggle(roadmap, module.title)
+                                    val adapted = LearningEngine.adaptRoadmapForStruggle(roadmap, module.title)
+                                    roadmap = adapted
+                                    AppStorage.saveRoadmapData(context, report, adapted)
                                 }
                             ) {
                                 Text("Struggled? Adapt Plan")
@@ -121,7 +129,9 @@ fun RoadmapScreen(profile: StudentProfile) {
             OutlinedButton(
                 onClick = {
                     gapReport = null
+                    roadmap = emptyList()
                     selectedAnswers = emptyMap()
+                    AppStorage.saveRoadmapData(context, null, emptyList())
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {

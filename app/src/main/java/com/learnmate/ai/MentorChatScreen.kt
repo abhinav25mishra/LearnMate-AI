@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,29 +23,45 @@ fun MentorChatScreen(
     profile: StudentProfile,
     mentorEngine: AiMentorEngine = LocalLlamaEngine
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
     var difficulty by remember { mutableStateOf(profile.skillLevel) }
     var hintOnly by remember { mutableStateOf(true) }
     var isThinking by remember { mutableStateOf(false) }
 
-    var messages by remember {
-        mutableStateOf(
-            listOf(
-                ChatMessage(
-                    sender = "LearnMate AI",
-                    text = "Hi ${profile.name}! I'm your offline ${profile.subject} mentor (${profile.preferredLanguage}). Ask me any concept or paste a mistake!"
-                )
-            )
+    val welcomeMessage = remember(profile.name, profile.subject, profile.preferredLanguage) {
+        ChatMessage(
+            sender = "LearnMate AI",
+            text = "Hi ${profile.name}! I'm your offline ${profile.subject} mentor (${profile.preferredLanguage}). Ask me any concept or paste a mistake!"
         )
     }
 
+    var messages by remember {
+        val saved = AppStorage.loadChatHistory(context)
+        mutableStateOf(if (saved.isNotEmpty()) saved else listOf(welcomeMessage))
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            text = "On-Device AI Mentor (${profile.preferredLanguage})",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "On-Device AI Mentor (${profile.preferredLanguage})",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            TextButton(
+                onClick = {
+                    messages = listOf(welcomeMessage)
+                    AppStorage.saveChatHistory(context, messages)
+                }
+            ) {
+                Text("Clear")
+            }
+        }
 
         Spacer(modifier = Modifier.height(6.dp))
 
@@ -119,11 +136,15 @@ fun MentorChatScreen(
                     val q = input.trim()
                     if (q.isNotEmpty() && !isThinking) {
                         input = ""
-                        messages = messages + ChatMessage("You", q)
+                        val withUser = messages + ChatMessage("You", q)
+                        messages = withUser
+                        AppStorage.saveChatHistory(context, withUser)
                         isThinking = true
                         scope.launch {
                             val reply = mentorEngine.askMentor(q, profile, difficulty, hintOnly)
-                            messages = messages + ChatMessage("LearnMate AI", reply)
+                            val withAi = messages + ChatMessage("LearnMate AI", reply)
+                            messages = withAi
+                            AppStorage.saveChatHistory(context, withAi)
                             isThinking = false
                         }
                     }
