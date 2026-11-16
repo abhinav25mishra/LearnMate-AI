@@ -13,7 +13,18 @@ data class UiStrings(
     val aiMentor: String,
     val askDoubtsDesc: String,
     val learningProfile: String,
-    val resetProfile: String
+    val resetProfile: String,
+    val diagnosticTitle: String,
+    val analyzeBtn: String,
+    val gapAnalysisTitle: String,
+    val weeklyModulesTitle: String,
+    val markComplete: String,
+    val completedLabel: String,
+    val adaptPlan: String,
+    val flashcardsTitle: String,
+    val askPlaceholder: String,
+    val socraticHints: String,
+    val fullSolution: String
 )
 
 object StringsManager {
@@ -32,7 +43,18 @@ object StringsManager {
                 aiMentor = "AI मेंटर",
                 askDoubtsDesc = "ऑफ़लाइन संदेह पूछें",
                 learningProfile = "लर्निंग प्रोफ़ाइल",
-                resetProfile = "प्रोफ़ाइल बदलें / रीसेट करें"
+                resetProfile = "प्रोफ़ाइल बदलें / रीसेट करें",
+                diagnosticTitle = "कौशल अंतर मूल्यांकन",
+                analyzeBtn = "कमज़ोर विषय पहचानें और रोडमैप बनाएं",
+                gapAnalysisTitle = "कौशल अंतर विश्लेषण",
+                weeklyModulesTitle = "साप्ताहिक अध्ययन मॉड्यूल",
+                markComplete = "पूर्ण चिह्नित करें",
+                completedLabel = "पूर्ण ✓",
+                adaptPlan = "योजना बदलें",
+                flashcardsTitle = "अभ्यास फ्लैशकार्ड",
+                askPlaceholder = "ऑफ़लाइन AI मेंटर से पूछें...",
+                socraticHints = "संकेत मोड",
+                fullSolution = "पूरा उत्तर"
             )
             "Tamil" -> UiStrings(
                 offlineBadge = "100% ஆஃப்லைன்",
@@ -47,7 +69,18 @@ object StringsManager {
                 aiMentor = "AI ஆசான்",
                 askDoubtsDesc = "சந்தேகங்களைக் கேளுங்கள்",
                 learningProfile = "கற்றல் சுயவிவரம்",
-                resetProfile = "சுயவிவரத்தை மாற்று"
+                resetProfile = "சுயவிவரத்தை மாற்று",
+                diagnosticTitle = "திறன் இடைவெளி சோதனை",
+                analyzeBtn = "திறன் இடைவெளியை ஆராய்ந்து திட்டம் உருவாக்கு",
+                gapAnalysisTitle = "திறன் இடைவெளி பகுப்பாய்வு",
+                weeklyModulesTitle = "வாராந்திர பாடத் திட்டம்",
+                markComplete = "முடிந்தது எனக் குறி",
+                completedLabel = "முடிந்தது ✓",
+                adaptPlan = "திட்டத்தை மாற்று",
+                flashcardsTitle = "பயிற்சி அட்டைகள்",
+                askPlaceholder = "AI ஆசானிடம் கேளுங்கள்...",
+                socraticHints = "குறிப்புகள்",
+                fullSolution = "முழு விடை"
             )
             "Telugu" -> UiStrings(
                 offlineBadge = "100% ఆఫ్‌లైన్",
@@ -62,7 +95,18 @@ object StringsManager {
                 aiMentor = "AI మెంటర్",
                 askDoubtsDesc = "ఆఫ్‌లైన్‌లో సందేహాలు అడగండి",
                 learningProfile = "లెర్నింగ్ ప్రొఫైల్",
-                resetProfile = "ప్రొఫైల్ మార్చండి"
+                resetProfile = "ప్రొఫైల్ మార్చండి",
+                diagnosticTitle = "నైపుణ్య పరీక్ష",
+                analyzeBtn = "రోడ్‌మ్యాప్ రూపొందించండి",
+                gapAnalysisTitle = "నైపుణ్య విశ్లేషణ",
+                weeklyModulesTitle = "వారపు అధ్యయన మాడ్యూల్స్",
+                markComplete = "పూర్తయింది",
+                completedLabel = "పూర్తయింది ✓",
+                adaptPlan = "ప్లాన్ మార్చండి",
+                flashcardsTitle = "ప్రాక్టీస్ ఫ్లాష్‌కార్డ్స్",
+                askPlaceholder = "మీ AI మెంటర్‌ని అడగండి...",
+                socraticHints = "హింట్స్",
+                fullSolution = "పూర్తి సమాధానం"
             )
             "Bengali" -> UiStrings(
                 offlineBadge = "100% অফলাইন",
@@ -77,7 +121,18 @@ object StringsManager {
                 aiMentor = "AI মেন্টর",
                 askDoubtsDesc = "অফলাইনে প্রশ্ন করুন",
                 learningProfile = "লার্নিং প্রোফাইল",
-                resetProfile = "প্রোফাইল পরিবর্তন করুন"
+                resetProfile = "প্রোফাইল পরিবর্তন করুন",
+                diagnosticTitle = "দক্ষতা যাচাই পরীক্ষা",
+                analyzeBtn = "দুর্বল বিষয় চিহ্নিত করে রোডম্যাপ তৈরি করুন",
+                gapAnalysisTitle = "দক্ষতা বিশ্লেষণ",
+                weeklyModulesTitle = "সাপ্তাহিক স্টাডি মডিউল",
+                markComplete = "সম্পন্ন করুন",
+                completedLabel = "সম্পন্ন ✓",
+                adaptPlan = "প্ল্যান পরিবর্তন করুন",
+                flashcardsTitle = "প্র্যাকটিস ফ্ল্যাশকার্ড",
+                askPlaceholder = "AI মেন্টরকে প্রশ্ন করুন...",
+                socraticHints = "ইঙ্গিত মোড",
+                fullSolution = "সম্পূর্ণ উত্তর"
             )
             "Marathi" -> UiStrings(
                 offlineBadge = "100% ऑफलाइन",
@@ -92,7 +147,18 @@ object StringsManager {
                 aiMentor = "AI मेंटर",
                 askDoubtsDesc = "ऑफलाइन शंका विचारा",
                 learningProfile = "लर्निंग प्रोफाइल",
-                resetProfile = "प्रोफाइल बदला / रीसेट करा"
+                resetProfile = "प्रोफाइल बदला / रीसेट करा",
+                diagnosticTitle = "कौशल्य चाचणी",
+                analyzeBtn = "रोडमॅप तयार करा",
+                gapAnalysisTitle = "कौशल्य विश्लेषण",
+                weeklyModulesTitle = "साप्ताहिक अभ्यास घटक",
+                markComplete = "पूर्ण झाले",
+                completedLabel = "पूर्ण ✓",
+                adaptPlan = "योजना बदला",
+                flashcardsTitle = "सराव फ्लॅशकार्ड्स",
+                askPlaceholder = "AI मेंटरला विचारा...",
+                socraticHints = "इशारे",
+                fullSolution = "पूर्ण उत्तर"
             )
             else -> UiStrings(
                 offlineBadge = "100% Offline",
@@ -107,7 +173,18 @@ object StringsManager {
                 aiMentor = "AI Mentor",
                 askDoubtsDesc = "Ask doubts offline",
                 learningProfile = "Learning Profile",
-                resetProfile = "Edit / Reset Profile"
+                resetProfile = "Edit / Reset Profile",
+                diagnosticTitle = "Skill-Gap Diagnostic",
+                analyzeBtn = "Analyze Skill Gaps & Build Roadmap",
+                gapAnalysisTitle = "Knowledge-Gap Visual Breakdown",
+                weeklyModulesTitle = "Personalised Weekly Modules",
+                markComplete = "Mark Complete",
+                completedLabel = "Completed ✓",
+                adaptPlan = "Adapt Plan",
+                flashcardsTitle = "Interactive Concept Flashcards",
+                askPlaceholder = "Ask your offline AI mentor...",
+                socraticHints = "Socratic Hints",
+                fullSolution = "Full Solution"
             )
         }
     }
