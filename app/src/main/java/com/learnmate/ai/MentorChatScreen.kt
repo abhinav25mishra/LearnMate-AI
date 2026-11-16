@@ -250,21 +250,29 @@ fun MentorChatScreen(
         }
 
         if (isThinking) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = Color(0xFFF0FDFA),
-                modifier = Modifier.padding(vertical = 4.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Color(0xFF0D9488))
-                    Text("Generating offline response on Arm CPU...", fontSize = 12.sp, color = Color(0xFF0F766E))
-                }
-            }
-        }
+         Surface(
+             shape = RoundedCornerShape(12.dp),
+             color = MaterialTheme.colorScheme.secondaryContainer,
+             modifier = Modifier.padding(vertical = 4.dp)
+         ) {
+             Row(
+                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                 verticalAlignment = Alignment.CenterVertically,
+                 horizontalArrangement = Arrangement.spacedBy(8.dp)
+             ) {
+                 CircularProgressIndicator(
+                     modifier = Modifier.size(14.dp),
+                     strokeWidth = 2.dp,
+                     color = MaterialTheme.colorScheme.secondary
+                 )
+                 Text(
+                     text = "Generating offline response on Arm CPU...",
+                     fontSize = 12.sp,
+                     color = MaterialTheme.colorScheme.onSecondaryContainer
+                 )
+             }
+         }
+     }
 
         // Quick Prompt Suggestions
         Row(

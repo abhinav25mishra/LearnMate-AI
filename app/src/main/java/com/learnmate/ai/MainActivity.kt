@@ -3,12 +3,15 @@ package com.learnmate.ai
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,9 +24,13 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.OfflineBolt
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 private val LightLearnMateScheme = lightColorScheme(
     primary = Color(0xFF1D4ED8),
@@ -73,6 +81,7 @@ private val DarkLearnMateScheme = darkColorScheme(
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             var isDarkMode by remember { mutableStateOf(false) }
@@ -185,31 +194,31 @@ fun LearnMateApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                                 )
                             }
                             Surface(
-                                onClick = { showPerfScreen = true },
-                                shape = RoundedCornerShape(20.dp),
-                                color = Color(0xFFF0FDFA),
-                                border = BorderStroke(1.dp, Color(0xFF99F6E4)),
-                                modifier = Modifier.padding(end = 10.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.OfflineBolt,
-                                        contentDescription = null,
-                                        tint = Color(0xFF0D9488),
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                    Text(
-                                        text = strings.offlineBadge,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF0F766E)
-                                    )
-                                }
-                            }
+                             onClick = { showPerfScreen = true },
+                             shape = RoundedCornerShape(20.dp),
+                             color = MaterialTheme.colorScheme.secondaryContainer,
+                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)),
+                             modifier = Modifier.padding(end = 10.dp)
+                         ) {
+                             Row(
+                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                 verticalAlignment = Alignment.CenterVertically,
+                                 horizontalArrangement = Arrangement.spacedBy(3.dp)
+                             ) {
+                                 Icon(
+                                     imageVector = Icons.Default.OfflineBolt,
+                                     contentDescription = null,
+                                     tint = MaterialTheme.colorScheme.secondary,
+                                     modifier = Modifier.size(13.dp)
+                                 )
+                                 Text(
+                                     text = strings.offlineBadge,
+                                     fontSize = 10.sp,
+                                     fontWeight = FontWeight.Bold,
+                                     color = MaterialTheme.colorScheme.onSecondaryContainer
+                                 )
+                             }
+                         }
                         }
                     )
                 }
@@ -293,6 +302,26 @@ fun HomeDashboardTab(
     val completionPct = if (savedRoadmap.isEmpty()) 0 else (completedModules * 100) / savedRoadmap.size
     var dailyGoalChecked by remember { mutableStateOf(false) }
 
+    // 7-Day Consistency Strip State
+    val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    var activeDays by remember { mutableStateOf(setOf(0, 1)) }
+
+    // 25-Minute Study Focus Timer State
+    var secondsLeft by remember { mutableStateOf(25 * 60) }
+    var isTimerRunning by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isTimerRunning) {
+        while (isTimerRunning && secondsLeft > 0) {
+            delay(1000L)
+            secondsLeft -= 1
+        }
+        if (secondsLeft == 0) isTimerRunning = false
+    }
+
+    val mins = secondsLeft / 60
+    val secs = secondsLeft % 60
+    val formattedTimer = "%02d:%02d".format(mins, secs)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -333,7 +362,7 @@ fun HomeDashboardTab(
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
-                                text = "DAY 1 STREAK • ON-DEVICE",
+                                text = "${activeDays.size}-DAY STREAK • ON-DEVICE",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -397,39 +426,137 @@ fun HomeDashboardTab(
             }
         }
 
-        // Daily Study Goal Interactive Card
+        // 7-Day Weekly Consistency Strip
         Surface(
-            onClick = { dailyGoalChecked = !dailyGoalChecked },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = if (dailyGoalChecked) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, if (dailyGoalChecked) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant),
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             shadowElevation = 1.dp
         ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Weekly Study Consistency", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("${activeDays.size}/7 days", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.secondary)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    weekDays.forEachIndexed { idx, day ->
+                        val checked = activeDays.contains(idx)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable {
+                                    activeDays = if (checked) activeDays - idx else activeDays + idx
+                                }
+                                .padding(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(if (checked) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (checked) "✓" else day.take(1),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (checked) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(day, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Daily Study Goal + 25-Min Focus Sprint Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Surface(
+                onClick = { dailyGoalChecked = !dailyGoalChecked },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(18.dp),
+                color = if (dailyGoalChecked) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, if (dailyGoalChecked) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant),
+                shadowElevation = 1.dp
             ) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Daily Goal", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Icon(
+                            imageVector = if (dailyGoalChecked) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                            contentDescription = null,
+                            tint = if (dailyGoalChecked) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Text("${profile.dailyHours} hrs/day", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
                     Text(
-                        text = "Today's Study Target (${profile.dailyHours} hrs)",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = if (dailyGoalChecked) "Awesome! Daily session logged offline." else "Tap to check in after completing today's task",
-                        fontSize = 12.sp,
+                        text = if (dailyGoalChecked) "Logged offline ✓" else "Tap to check in",
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Icon(
-                    imageVector = if (dailyGoalChecked) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                    contentDescription = null,
-                    tint = if (dailyGoalChecked) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(26.dp)
-                )
+            }
+
+            Surface(
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                shadowElevation = 1.dp
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Icon(Icons.Default.Timer, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(16.dp))
+                            Text("Focus Sprint", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                    }
+                    Text(formattedTimer, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilledTonalIconButton(
+                            onClick = { isTimerRunning = !isTimerRunning },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isTimerRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = "Start/Pause",
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        FilledTonalIconButton(
+                            onClick = {
+                                isTimerRunning = false
+                                secondsLeft = 25 * 60
+                            },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Reset", modifier = Modifier.size(15.dp))
+                        }
+                    }
+                }
             }
         }
 

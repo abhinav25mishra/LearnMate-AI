@@ -1,17 +1,21 @@
 package com.learnmate.ai
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Flip
 import androidx.compose.material.icons.filled.Quiz
@@ -22,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -39,36 +44,45 @@ fun RoadmapScreen(profile: StudentProfile, strings: UiStrings = StringsManager.g
     var roadmap by remember { mutableStateOf(AppStorage.loadRoadmap(context)) }
     var flashcardIndex by remember { mutableStateOf(0) }
     var isCardFlipped by remember { mutableStateOf(false) }
+    var masteredCards by remember { mutableStateOf(emptySet<Int>()) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (gapReport == null) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF1E3A8A), Color(0xFF0D9488))
+                        ),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .padding(18.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Default.Quiz, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.Quiz, contentDescription = null, tint = Color(0xFF5EEAD4))
                         Text(
                             text = "${strings.diagnosticTitle} (${profile.subject})",
                             fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
                         )
                     }
                     Text(
-                        text = "Answer ${questions.size} quick questions so the on-device engine can map missing prerequisites and build your weekly study plan.",
+                        text = "Answer ${questions.size} quick questions so the on-device engine can map missing prerequisites and build your weekly study timeline.",
                         fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = Color(0xFFE0F2FE)
                     )
                     LinearProgressIndicator(
                         progress = { selectedAnswers.size.toFloat() / questions.size.coerceAtLeast(1) },
+                        color = Color(0xFF5EEAD4),
+                        trackColor = Color.White.copy(alpha = 0.25f),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(6.dp)
@@ -80,36 +94,43 @@ fun RoadmapScreen(profile: StudentProfile, strings: UiStrings = StringsManager.g
             questions.forEach { q ->
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(18.dp),
                     color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    shadowElevation = 1.dp
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
+                            shape = RoundedCornerShape(8.dp),
                             color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             Text(
                                 text = "Topic: ${q.topic}",
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                             )
                         }
-                        Text("${q.id}. ${q.question}", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(
+                            text = "${q.id}. ${q.question}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
 
                         q.options.forEachIndexed { idx, option ->
                             val isSelected = selectedAnswers[q.id] == idx
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(12.dp))
                                     .clickable { selectedAnswers = selectedAnswers + (q.id to idx) },
-                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                border = if (isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
@@ -119,7 +140,12 @@ fun RoadmapScreen(profile: StudentProfile, strings: UiStrings = StringsManager.g
                                         tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(20.dp)
                                     )
-                                    Text(option, fontSize = 14.sp)
+                                    Text(
+                                        text = option,
+                                        fontSize = 14.sp,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                    )
                                 }
                             }
                         }
@@ -138,8 +164,8 @@ fun RoadmapScreen(profile: StudentProfile, strings: UiStrings = StringsManager.g
                 enabled = selectedAnswers.size == questions.size,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(14.dp)
+                    .height(54.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Text(
                     text = if (selectedAnswers.size == questions.size) {
@@ -156,33 +182,39 @@ fun RoadmapScreen(profile: StudentProfile, strings: UiStrings = StringsManager.g
             val progressFraction = if (roadmap.isEmpty()) 0f else completedCount.toFloat() / roadmap.size
 
             // Overall Roadmap Mastery Banner
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF1E3A8A), Color(0xFF0D9488))
+                        ),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .padding(18.dp)
             ) {
-                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Roadmap Mastery", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("${(progressFraction * 100).toInt()}%", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF5EEAD4))
+                        Text("${(progressFraction * 100).toInt()}%", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF5EEAD4))
                     }
                     LinearProgressIndicator(
                         progress = { progressFraction },
-                        color = Color(0xFF14B8A6),
-                        trackColor = Color(0xFF1E40AF),
+                        color = Color(0xFF5EEAD4),
+                        trackColor = Color.White.copy(alpha = 0.25f),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(8.dp)
                             .clip(RoundedCornerShape(4.dp))
                     )
                     Text(
-                        text = "$completedCount of ${roadmap.size} modules completed • Level: ${report.assignedLevel}",
+                        text = "$completedCount of ${roadmap.size} modules completed • Assigned Level: ${report.assignedLevel}",
                         fontSize = 12.sp,
-                        color = Color(0xFFDBEAFE)
+                        color = Color(0xFFE0F2FE)
                     )
                 }
             }
@@ -192,14 +224,15 @@ fun RoadmapScreen(profile: StudentProfile, strings: UiStrings = StringsManager.g
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                shadowElevation = 1.dp
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Default.BarChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Text(strings.gapAnalysisTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(strings.gapAnalysisTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
                     }
-                    HorizontalDivider()
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     report.strongTopics.forEach { topic ->
                         SkillBarRow(topic = topic, scorePercent = 95, isGap = false)
@@ -208,21 +241,21 @@ fun RoadmapScreen(profile: StudentProfile, strings: UiStrings = StringsManager.g
                         SkillBarRow(topic = topic, scorePercent = 30, isGap = true)
                     }
                     if (report.strongTopics.isEmpty() && report.weakTopics.isEmpty()) {
-                        SkillBarRow(topic = profile.subject, scorePercent = 80, isGap = false)
+                        SkillBarRow(topic = profile.subject, scorePercent = 85, isGap = false)
                     }
 
                     if (report.missingPrerequisites.isNotEmpty()) {
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFFFEF3C7),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
                                 text = "🔑 Prioritized Prerequisites: ${report.missingPrerequisites.joinToString(", ")}",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF92400E),
-                                modifier = Modifier.padding(10.dp)
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.padding(12.dp)
                             )
                         }
                     }
@@ -231,12 +264,21 @@ fun RoadmapScreen(profile: StudentProfile, strings: UiStrings = StringsManager.g
 
             // Interactive Concept Flashcard Arena
             if (questions.isNotEmpty()) {
-                val activeQ = questions[flashcardIndex % questions.size]
+                val activeIndex = flashcardIndex % questions.size
+                val activeQ = questions[activeIndex]
+                val cardSurfaceColor by animateColorAsState(
+                    targetValue = if (isCardFlipped) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                    animationSpec = tween(300),
+                    label = "cardFlipColor"
+                )
+                val cardTextColor = if (isCardFlipped) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
+
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    color = if (isCardFlipped) Color(0xFFF0FDFA) else MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, if (isCardFlipped) Color(0xFF5EEAD4) else MaterialTheme.colorScheme.outlineVariant)
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    shadowElevation = 1.dp
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(
@@ -246,28 +288,46 @@ fun RoadmapScreen(profile: StudentProfile, strings: UiStrings = StringsManager.g
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Icon(Icons.Default.Flip, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
-                                Text(strings.flashcardsTitle, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text(strings.flashcardsTitle, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
                             }
-                            Text(
-                                text = "Card ${(flashcardIndex % questions.size) + 1}/${questions.size}",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer
+                            ) {
+                                Text(
+                                    text = "Mastered ${masteredCards.size}/${questions.size}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
                         }
 
                         Surface(
                             onClick = { isCardFlipped = !isCardFlipped },
-                            shape = RoundedCornerShape(14.dp),
-                            color = if (isCardFlipped) Color(0xFFCCFBF1) else MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(16.dp),
+                            color = cardSurfaceColor,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(
-                                    text = if (isCardFlipped) "ANSWER & PREREQUISITE" else "CONCEPT CHECK (TAP TO FLIP)",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isCardFlipped) Color(0xFF0F766E) else MaterialTheme.colorScheme.primary
-                                )
+                            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = if (isCardFlipped) "ANSWER & PREREQUISITE" else "CONCEPT CHECK • TAP TO FLIP",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = if (isCardFlipped) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "${activeIndex + 1}/${questions.size}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                                 Text(
                                     text = if (isCardFlipped) {
                                         "✅ ${activeQ.options[activeQ.correctIndex]}\n\nFoundation: ${activeQ.prerequisite}"
@@ -276,25 +336,39 @@ fun RoadmapScreen(profile: StudentProfile, strings: UiStrings = StringsManager.g
                                     },
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF0F172A)
+                                    lineHeight = 20.sp,
+                                    color = cardTextColor
                                 )
                             }
                         }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TextButton(onClick = { isCardFlipped = !isCardFlipped }) {
-                                Text(if (isCardFlipped) "Show Question" else "Reveal Answer")
+                            OutlinedButton(
+                                onClick = {
+                                    masteredCards = if (masteredCards.contains(activeQ.id)) {
+                                        masteredCards - activeQ.id
+                                    } else {
+                                        masteredCards + activeQ.id
+                                    }
+                                },
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(if (masteredCards.contains(activeQ.id)) "Mastered" else "Got It", fontSize = 12.sp)
                             }
+
                             TextButton(
                                 onClick = {
                                     isCardFlipped = false
                                     flashcardIndex = (flashcardIndex + 1) % questions.size
                                 }
                             ) {
-                                Text("Next Card")
+                                Text("Next Card", fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
                             }
@@ -303,72 +377,140 @@ fun RoadmapScreen(profile: StudentProfile, strings: UiStrings = StringsManager.g
                 }
             }
 
-            // Weekly Study Modules
-            Text(strings.weeklyModulesTitle, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            // Personalised Weekly Timeline
+            Text(
+                text = strings.weeklyModulesTitle,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
 
             roadmap.forEachIndexed { index, module ->
                 val weekLabel = "W${index + 1}"
-                Surface(
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    color = if (module.isCompleted) Color(0xFFF0FDFA) else MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, if (module.isCompleted) Color(0xFF99F6E4) else MaterialTheme.colorScheme.outlineVariant)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                    // Timeline Node Badge
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (module.isCompleted) MaterialTheme.colorScheme.secondary
+                                    else MaterialTheme.colorScheme.primaryContainer
+                                ),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = if (module.isRevision) Color(0xFFFEF3C7) else MaterialTheme.colorScheme.primaryContainer
-                            ) {
-                                Text(
-                                    text = if (module.isRevision) "$weekLabel • REVISION" else "$weekLabel • ${module.estimatedMinutes} MIN",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (module.isRevision) Color(0xFF92400E) else MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
-                            }
-                            if (module.isCompleted) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = "Completed", tint = Color(0xFF0D9488))
-                            }
+                            Text(
+                                text = weekLabel,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (module.isCompleted) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         }
+                    }
 
-                        Text(module.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text("Prerequisite: ${module.prerequisite}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(module.dailyTask, fontSize = 14.sp)
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(
-                                onClick = {
-                                    val updated = roadmap.map {
-                                        if (it.id == module.id) it.copy(isCompleted = !it.isCompleted) else it
-                                    }
-                                    roadmap = updated
-                                    AppStorage.saveRoadmapData(context, report, updated)
-                                },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (module.isCompleted) Color(0xFF0D9488) else MaterialTheme.colorScheme.primary
-                                )
+                    // Module Card (Theme-adaptive colors for Light & Dark mode)
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(18.dp),
+                        color = if (module.isCompleted) {
+                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                        border = BorderStroke(
+                            1.dp,
+                            if (module.isCompleted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant
+                        ),
+                        shadowElevation = 1.dp
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(if (module.isCompleted) strings.completedLabel else strings.markComplete, fontSize = 12.sp)
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (module.isRevision) {
+                                        MaterialTheme.colorScheme.tertiaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    }
+                                ) {
+                                    Text(
+                                        text = if (module.isRevision) "ADAPTIVE REVISION" else "${module.estimatedMinutes} MIN SESSION",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (module.isRevision) {
+                                            MaterialTheme.colorScheme.onTertiaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
+                                if (module.isCompleted) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = "Completed",
+                                        tint = MaterialTheme.colorScheme.secondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
 
-                            OutlinedButton(
-                                onClick = {
-                                    val adapted = LearningEngine.adaptRoadmapForStruggle(roadmap, module.title)
-                                    roadmap = adapted
-                                    AppStorage.saveRoadmapData(context, report, adapted)
-                                },
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Icon(Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(strings.adaptPlan, fontSize = 12.sp)
+                            Text(
+                                text = module.title,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Prerequisite: ${module.prerequisite}",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = module.dailyTask,
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+                            )
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = {
+                                        val updated = roadmap.map {
+                                            if (it.id == module.id) it.copy(isCompleted = !it.isCompleted) else it
+                                        }
+                                        roadmap = updated
+                                        AppStorage.saveRoadmapData(context, report, updated)
+                                    },
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (module.isCompleted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
+                                    Text(if (module.isCompleted) strings.completedLabel else strings.markComplete, fontSize = 12.sp)
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        val adapted = LearningEngine.adaptRoadmapForStruggle(roadmap, module.title)
+                                        roadmap = adapted
+                                        AppStorage.saveRoadmapData(context, report, adapted)
+                                    },
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(15.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(strings.adaptPlan, fontSize = 12.sp)
+                                }
                             }
                         }
                     }
@@ -382,7 +524,7 @@ fun RoadmapScreen(profile: StudentProfile, strings: UiStrings = StringsManager.g
                     selectedAnswers = emptyMap()
                     AppStorage.saveRoadmapData(context, null, emptyList())
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(46.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -402,17 +544,17 @@ private fun SkillBarRow(topic: String, scorePercent: Int, isGap: Boolean) {
     )
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(topic, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(topic, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
             Text(
                 text = if (isGap) "$scorePercent% (Gap Detected)" else "$scorePercent% (Mastered)",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isGap) Color(0xFFD97706) else Color(0xFF0D9488)
+                color = if (isGap) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary
             )
         }
         LinearProgressIndicator(
             progress = { animatedProgress },
-            color = if (isGap) Color(0xFFF59E0B) else Color(0xFF0D9488),
+            color = if (isGap) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier
                 .fillMaxWidth()
