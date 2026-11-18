@@ -188,13 +188,13 @@ object LocalLlamaEngine : AiMentorEngine {
             qLower.contains("linked list") || qLower.contains("stack") || qLower.contains("queue") || qLower.contains("tree")) {
             return if (hintOnly) {
                 "💡 Data Structures Hint ($lang):\n" +
-                    "Compare **memory layout** first: Arrays/Lists store elements in contiguous memory for $O(1)$ index access, whereas Linked Structures use pointers for $O(1)$ insertion without shifting."
+                    "Compare **memory layout** first: Arrays/Lists store elements in contiguous memory for O(1)$ index access, whereas Linked Structures use pointers for O(1)$ insertion without shifting."
             } else {
                 "📚 Mastering Data Structures: Lists & Arrays ($difficulty • $lang):\n\n" +
                     "**1. Core Concepts & Time Complexity**\n" +
-                    "• **Access by Index (`arr[i]`):** $O(1)$ — direct memory offset calculation.\n" +
-                    "• **Search (Unsorted):** $O(n)$ linear scan; $O(\\log n)$ with Binary Search if sorted.\n" +
-                    "• **Insert / Delete at Middle:** $O(n)$ because subsequent elements must shift.\n\n" +
+                    "• **Access by Index (`arr[i]`):** O(1)$ — direct memory offset calculation.\n" +
+                    "• **Search (Unsorted):** O(n)$ linear scan; O(\\log n)$ with Binary Search if sorted.\n" +
+                    "• **Insert / Delete at Middle:** O(n)$ because subsequent elements must shift.\n\n" +
                     "**2. Practical Python Example**\n" +
                     "```python\n" +
                     "scores = [78, 85, 92, 88]\n" +
@@ -203,7 +203,7 @@ object LocalLlamaEngine : AiMentorEngine {
                     "print(\"Top 3:\", top_three) # [95, 92, 88]\n" +
                     "```\n\n" +
                     "**3. Next Practice Step**\n" +
-                    "Try solving the **Two-Sum** or **Sliding Window Maximum** problem using a single pass ($O(n)$) over an array."
+                    "Try solving the **Two-Sum** or **Sliding Window Maximum** problem using a single pass (O(n)$) over an array."
             }
         }
 
