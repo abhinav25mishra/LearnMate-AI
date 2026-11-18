@@ -67,7 +67,6 @@ object LocalLlamaEngine : AiMentorEngine {
         val sizeMb = "${pteFile.length() / (1024 * 1024)} MB"
 
         try {
-            // 1. Load model once and measure real load latency
             if (llmModule == null || loadedModelPath != pteFile.absolutePath) {
                 val startLoad = System.nanoTime()
                 val module = LlmModule(pteFile.absolutePath, tokFile.absolutePath, 0.7f)
@@ -94,7 +93,6 @@ object LocalLlamaEngine : AiMentorEngine {
                 )
             }
 
-            // 2. Run real on-device token generation and measure live TTFT & tokens/sec
             val module = llmModule!!
             val formattedPrompt = buildLlama3Prompt(question, profile, difficulty, hintOnly)
             val responseBuilder = StringBuilder()
@@ -112,13 +110,8 @@ object LocalLlamaEngine : AiMentorEngine {
                     responseBuilder.append(result)
                 }
 
-                override fun onStats(tps: Float) {
-                    if (tps > 0f) {
-                        PerformanceTracker.latestMetrics = PerformanceTracker.latestMetrics.copy(
-                            tokensPerSec = "%.1f".format(tps),
-                            inferenceStatus = "ExecuTorch Active (Arm64)"
-                        )
-                    }
+                override fun onStats(stats: String) {
+                    // Stats JSON received from ExecuTorch runtime
                 }
             }
 
