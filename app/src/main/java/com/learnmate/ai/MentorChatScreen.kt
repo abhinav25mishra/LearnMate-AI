@@ -1,4 +1,4 @@
-package com.learnmate.ai
+﻿package com.learnmate.ai
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -89,20 +89,16 @@ fun MentorChatScreen(
             q
         }
 
-        scope.launch {
-            val fullReply = mentorEngine.askMentor(contextualPrompt, profile, difficulty, hintOnly)
-            isThinking = false
-
-            // Stream response word-by-word for smooth real-time token rendering
+                scope.launch {
             val baseMessages = messages
-            val words = fullReply.split(" ")
-            val builder = StringBuilder()
-            for (i in words.indices) {
-                if (i > 0) builder.append(" ")
-                builder.append(words[i])
-                messages = baseMessages + ChatMessage("LearnMate AI", builder.toString())
-                delay(28L)
+            val finalReply = mentorEngine.askMentorStream(contextualPrompt, profile, difficulty, hintOnly) { partialText ->
+                isThinking = false
+                val cleaned = partialText.replace("**", "").replace("```python", "").replace("```sql", "").replace("```", "")
+                messages = baseMessages + ChatMessage("LearnMate AI", cleaned)
             }
+            isThinking = false
+            val cleanedFinal = finalReply.replace("**", "").replace("```python", "").replace("```sql", "").replace("```", "")
+            messages = baseMessages + ChatMessage("LearnMate AI", cleanedFinal)
             AppStorage.saveChatHistory(context, messages)
         }
     }

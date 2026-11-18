@@ -1,4 +1,4 @@
-package com.learnmate.ai
+﻿package com.learnmate.ai
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -84,6 +84,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
+            LaunchedEffect(Unit) { LocalLlamaEngine.warmUp() }
             var isDarkMode by remember { mutableStateOf(false) }
             MaterialTheme(colorScheme = if (isDarkMode) DarkLearnMateScheme else LightLearnMateScheme) {
                 LearnMateApp(isDarkMode = isDarkMode, onToggleDarkMode = { isDarkMode = !isDarkMode })
@@ -362,7 +363,7 @@ fun HomeDashboardTab(
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
-                                text = "${activeDays.size}-DAY STREAK • ON-DEVICE",
+                                text = "${activeDays.size}-DAY STREAK â€¢ ON-DEVICE",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -386,7 +387,7 @@ fun HomeDashboardTab(
                         color = Color(0xFF0F172A).copy(alpha = 0.35f)
                     ) {
                         Text(
-                            text = "${profile.subject} • ${profile.skillLevel}",
+                            text = "${profile.subject} â€¢ ${profile.skillLevel}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFFCCFBF1),
@@ -467,7 +468,7 @@ fun HomeDashboardTab(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = if (checked) "✓" else day.take(1),
+                                    text = if (checked) "âœ“" else day.take(1),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (checked) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
@@ -509,7 +510,7 @@ fun HomeDashboardTab(
                     }
                     Text("${profile.dailyHours} hrs/day", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
                     Text(
-                        text = if (dailyGoalChecked) "Logged offline ✓" else "Tap to check in",
+                        text = if (dailyGoalChecked) "Logged offline âœ“" else "Tap to check in",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
