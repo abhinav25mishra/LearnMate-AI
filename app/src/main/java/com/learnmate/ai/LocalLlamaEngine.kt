@@ -16,11 +16,11 @@ object LocalLlamaEngine : AiMentorEngine {
 
     private fun resolveModelFiles(): Pair<File?, File?> {
         val pteCandidates = listOf(
-            File("/data/local/tmp/llama/llama3_2_1b_int4.pte"),
+            File("/data/local/tmp/llama/Llama-3.2-1B-Instruct.pte"), File("/data/local/tmp/llama/llama3_2_1b_int4.pte"),
             File("/sdcard/Android/data/com.learnmate.ai/files/llama/llama3_2_1b_int4.pte")
         )
         val tokCandidates = listOf(
-            File("/data/local/tmp/llama/tokenizer.json"),
+            File("/data/local/tmp/llama/tokenizer.bin"), File("/data/local/tmp/llama/tokenizer.json"),
             File("/sdcard/Android/data/com.learnmate.ai/files/llama/tokenizer.json"),
             File("/data/local/tmp/llama/tokenizer.model"),
             File("/sdcard/Android/data/com.learnmate.ai/files/llama/tokenizer.model")
