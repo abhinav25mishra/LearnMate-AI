@@ -3,6 +3,7 @@
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import org.pytorch.executorch.extension.llm.LlmCallback
 import org.pytorch.executorch.extension.llm.LlmModule
 
@@ -31,18 +32,14 @@ object LocalLlamaEngine : AiMentorEngine {
         difficulty: String,
         hintOnly: Boolean
     ): String {
-        val styleInstruction = if (hintOnly) {
-            "Give a concise Socratic hint and explain the prerequisite concept without giving away the full answer immediately."
-        } else {
-            "Provide a clear, complete step-by-step explanation with a practical example."
-        }
-        val systemPrompt = "You are LearnMate AI, an offline personalized tutor for ${profile.subject} " +
-            "(Student level: $difficulty, Preferred language: ${profile.preferredLanguage}, " +
-            "Interests: ${profile.interests}). $styleInstruction"
+        val cleanQuestion = question.substringAfter("]").trim().ifEmpty { question.trim() }
+        val modeNote = if (hintOnly) "Give a short hint first." else "Give a clear step-by-step answer with example."
+        val sys = "You are LearnMate AI, a helpful ${profile.subject} tutor ($difficulty level, ${profile.preferredLanguage}). $modeNote"
 
-        return "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n" +
-            "$systemPrompt<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n" +
-            "$question<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+        // Do NOT prepend <|begin_of_text|> because ExecuTorch LlmModule prepends BOS automatically
+        return "<|start_header_id|>system<|end_header_id|>\n\n" +
+            "$sys<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n" +
+            "$cleanQuestion<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
     }
 
     override suspend fun askMentor(
@@ -61,7 +58,7 @@ object LocalLlamaEngine : AiMentorEngine {
                 tokensPerSec = "0.0",
                 inferenceStatus = "Model Files Missing (/data/local/tmp/llama/)"
             )
-            return@withContext "Model files not found on device. Push llama3_2_1b_int4.pte and tokenizer.model to /data/local/tmp/llama/ to run offline Llama 3.2 inference."
+            return@withContext "Model files not found on device. Push llama3_2_1b_int4.pte and tokenizer.model to /data/local/tmp/llama/."
         }
 
         val sizeMb = "${pteFile.length() / (1024 * 1024)} MB"
@@ -81,7 +78,7 @@ object LocalLlamaEngine : AiMentorEngine {
                         tokensPerSec = "0.0",
                         inferenceStatus = "ExecuTorch Load Error ($loadStatus)"
                     )
-                    return@withContext "ExecuTorch failed to load model (status code $loadStatus). Check SELinux file permissions or model format."
+                    return@withContext "ExecuTorch failed to load model (code $loadStatus)."
                 }
 
                 llmModule = module
@@ -99,10 +96,12 @@ object LocalLlamaEngine : AiMentorEngine {
             val startGenNano = System.nanoTime()
             var firstTokenNano = 0L
             var tokenCount = 0
+            var rawStatsJson = ""
 
             val callback = object : LlmCallback {
                 override fun onResult(result: String) {
-                    if (result == "<|eot_id|>" || result == "<|end_of_text|>") return
+                    if (result.isEmpty()) return
+                    if (result == "<|eot_id|>" || result == "<|end_of_text|>" || result == "<|begin_of_text|>") return
                     if (tokenCount == 0) {
                         firstTokenNano = System.nanoTime()
                     }
@@ -111,34 +110,67 @@ object LocalLlamaEngine : AiMentorEngine {
                 }
 
                 override fun onStats(stats: String) {
-                    // Stats JSON received from ExecuTorch runtime
+                    rawStatsJson = stats
+                    try {
+                        val json = JSONObject(stats)
+                        val tps = json.optDouble("tokens_per_second", -1.0)
+                        val ttft = json.optLong("first_token_ms", -1L)
+                        if (tps > 0.0) {
+                            PerformanceTracker.latestMetrics = PerformanceTracker.latestMetrics.copy(
+                                tokensPerSec = "%.1f".format(tps),
+                                inferenceStatus = "ExecuTorch Active (Arm64)"
+                            )
+                        }
+                        if (ttft > 0L) {
+                            PerformanceTracker.latestMetrics = PerformanceTracker.latestMetrics.copy(
+                                ttftMs = "$ttft ms"
+                            )
+                        }
+                    } catch (_: Exception) {
+                    }
                 }
             }
 
-            module.generate(formattedPrompt, 256, callback, false)
+            // Use seqLen = 512 so prompt + generated tokens have plenty of context window
+            val genStatus = module.generate(formattedPrompt, 512, callback, false)
 
             val endGenNano = System.nanoTime()
-            val ttftMs = if (firstTokenNano > startGenNano) {
-                (firstTokenNano - startGenNano) / 1_000_000L
-            } else {
-                0L
+            if (tokenCount > 0) {
+                val ttftMs = if (firstTokenNano > startGenNano) (firstTokenNano - startGenNano) / 1_000_000L else 0L
+                val totalGenSec = ((endGenNano - startGenNano).coerceAtLeast(1_000_000L)) / 1_000_000_000.0
+                val measuredTps = tokenCount / totalGenSec
+
+                if (PerformanceTracker.latestMetrics.ttftMs == "0 ms") {
+                    PerformanceTracker.latestMetrics = PerformanceTracker.latestMetrics.copy(ttftMs = "$ttftMs ms")
+                }
+                if (PerformanceTracker.latestMetrics.tokensPerSec == "0.0") {
+                    PerformanceTracker.latestMetrics = PerformanceTracker.latestMetrics.copy(tokensPerSec = "%.1f".format(measuredTps))
+                }
             }
-            val totalGenSec = ((endGenNano - startGenNano).coerceAtLeast(1_000_000L)) / 1_000_000_000.0
-            val measuredTps = tokenCount / totalGenSec
 
-            PerformanceTracker.latestMetrics = PerformanceTracker.latestMetrics.copy(
-                modelSizeMb = sizeMb,
-                ttftMs = "$ttftMs ms",
-                tokensPerSec = "%.1f".format(measuredTps),
-                inferenceStatus = "ExecuTorch Active (Arm64)"
-            )
+            val finalResponse = responseBuilder.toString()
+                .replace("<|eot_id|>", "")
+                .replace("<|end_of_text|>", "")
+                .trim()
 
-            val finalResponse = responseBuilder.toString().trim()
             if (finalResponse.isNotEmpty()) {
                 return@withContext finalResponse
-            } else {
-                return@withContext "Model generated an empty response. Try rephrasing your question."
             }
+
+            // Fallback: try plain prompt without Llama 3 header tags in case .pte uses base/custom template
+            val plainPrompt = "Question: ${question.substringAfter("]").trim()}\nAnswer:"
+            module.generate(plainPrompt, 512, callback, false)
+
+            val retryResponse = responseBuilder.toString()
+                .replace("<|eot_id|>", "")
+                .replace("<|end_of_text|>", "")
+                .trim()
+
+            if (retryResponse.isNotEmpty()) {
+                return@withContext retryResponse
+            }
+
+            return@withContext "ExecuTorch returned 0 tokens (status=$genStatus, stats=$rawStatsJson). Verify tokenizer.model matches llama3_2_1b_int4.pte."
         } catch (t: Throwable) {
             PerformanceTracker.latestMetrics = PerformanceTracker.latestMetrics.copy(
                 modelSizeMb = sizeMb,
