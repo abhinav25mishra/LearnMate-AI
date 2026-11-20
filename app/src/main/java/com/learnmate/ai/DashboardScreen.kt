@@ -1,6 +1,7 @@
 ﻿package com.learnmate.ai
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,18 +14,142 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+@Composable
+fun ImprovementGraphCard(
+    assessmentHistory: List<AssessmentRecord>,
+    topicMasteryPct: Int
+) {
+    // Chronological percentage points (oldest -> newest)
+    val points: List<Pair<String, Float>> = remember(assessmentHistory, topicMasteryPct) {
+        if (assessmentHistory.isEmpty()) {
+            listOf(
+                "Start" to 10f,
+                "Roadmap" to topicMasteryPct.coerceAtLeast(15).toFloat()
+            )
+        } else {
+            val chronological = assessmentHistory.reversed()
+            listOf("Baseline" to 20f) + chronological.mapIndexed { idx, rec ->
+                val pct = ((rec.score * 100f) / rec.total.coerceAtLeast(1)).coerceIn(0f, 100f)
+                "Test ${idx + 1}" to pct
+            }
+        }
+    }
+
+    val lineColor = MaterialTheme.colorScheme.secondary
+    val dotColor = MaterialTheme.colorScheme.primary
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shadowElevation = 1.dp
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.TrendingUp, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                    Text("Learning Improvement Graph", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+                val latestPct = points.lastOrNull()?.second?.toInt() ?: 0
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Text(
+                        text = "Current: $latestPct%",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(130.dp)
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+            ) {
+                val w = size.width
+                val h = size.height
+
+                // Horizontal reference grid lines (0%, 50%, 100%)
+                listOf(0f, 0.5f, 1f).forEach { ratio ->
+                    val y = h * ratio
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(0f, y),
+                        end = Offset(w, y),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                }
+
+                if (points.size >= 2) {
+                    val stepX = w / (points.size - 1).coerceAtLeast(1)
+                    val path = Path()
+                    val coords = points.mapIndexed { idx, (_, pct) ->
+                        val x = idx * stepX
+                        val y = h - (pct / 100f) * h
+                        Offset(x, y)
+                    }
+
+                    coords.forEachIndexed { idx, pt ->
+                        if (idx == 0) path.moveTo(pt.x, pt.y) else path.lineTo(pt.x, pt.y)
+                    }
+
+                    drawPath(
+                        path = path,
+                        color = lineColor,
+                        style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                    )
+
+                    coords.forEach { pt ->
+                        drawCircle(color = Color.White, radius = 5.dp.toPx(), center = pt)
+                        drawCircle(color = dotColor, radius = 3.5.dp.toPx(), center = pt)
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                points.forEach { (label, pct) ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("${pct.toInt()}%", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun DashboardScreen(
@@ -39,6 +164,7 @@ fun DashboardScreen(
     val assessmentHistory = remember(profile.name) { ProfileStorage.loadAssessmentScores(context, profile.name) }
     val activeDates = remember(profile.name) { ProfileStorage.getActiveDateStrings(context, profile.name) }
     var showPasscode by remember { mutableStateOf(false) }
+    var customTopicInput by remember { mutableStateOf("") }
 
     val masteryPct = if (subjectTopics.isEmpty()) 0 else (exploredTopics.size * 100) / subjectTopics.size
     val latestScoreText = assessmentHistory.firstOrNull()?.let { "${it.score}/${it.total}" } ?: "0/10"
@@ -46,10 +172,10 @@ fun DashboardScreen(
     val availableTopics = listOf(
         "Python",
         "C Programming",
-        "Data Structures & Algorithms",
         "SQL & Databases",
-        "Machine Learning & AI",
-        "Mathematics"
+        "Data Structures & Algorithms",
+        "History",
+        "Geography"
     )
 
     Column(
@@ -58,6 +184,7 @@ fun DashboardScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
+        // Profile & Avatar Header Card
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -101,7 +228,7 @@ fun DashboardScreen(
                         color = Color.White
                     )
                     Text(
-                        text = "VicharaX Learner • Joined ${profile.createdAt}",
+                        text = "${profile.standard} • Joined ${profile.createdAt}",
                         fontSize = 12.sp,
                         color = Color(0xFFCCFBF1)
                     )
@@ -110,7 +237,7 @@ fun DashboardScreen(
                         color = Color.White.copy(alpha = 0.16f)
                     ) {
                         Text(
-                            text = "Subject: ${profile.subject} • ${profile.skillLevel}",
+                            text = "Learning: ${profile.subject} • ${profile.preferredLanguage}",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
@@ -121,6 +248,7 @@ fun DashboardScreen(
             }
         }
 
+        // 4-Metric Activity Strip
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -131,6 +259,13 @@ fun DashboardScreen(
             DashboardStatCard(title = "Progress", value = "$masteryPct%", modifier = Modifier.weight(1f))
         }
 
+        // Visual Improvement Graph
+        ImprovementGraphCard(
+            assessmentHistory = assessmentHistory,
+            topicMasteryPct = masteryPct
+        )
+
+        // Change / Search Active Topic (Updates Roadmap, Assessment & AI Mentor Guardrail)
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
@@ -141,8 +276,29 @@ fun DashboardScreen(
             Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.School, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text("Active Subject (Roadmap & Mentor Scope)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("Active Topic (Roadmap & AI Tutor Scope)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
+
+                OutlinedTextField(
+                    value = customTopicInput,
+                    onValueChange = { customTopicInput = it },
+                    placeholder = { Text("Enter any topic (e.g., History, Geography, Python)...", fontSize = 12.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    trailingIcon = {
+                        if (customTopicInput.isNotBlank()) {
+                            TextButton(onClick = {
+                                onSwitchTopic(customTopicInput.trim())
+                                customTopicInput = ""
+                            }) {
+                                Text("Set", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     availableTopics.chunked(2).forEach { rowTopics ->
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -160,6 +316,7 @@ fun DashboardScreen(
             }
         }
 
+        // Saved Account Details & Passcode Card
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
@@ -170,17 +327,18 @@ fun DashboardScreen(
             Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.AccountCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text("Sign-Up Details & Security", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("Student Profile & Security", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 DashInfoRow("Learner Name", profile.name)
-                DashInfoRow("Selected Interests", profile.interests)
-                DashInfoRow("Learning Goal", profile.goal)
-                DashInfoRow("Study Schedule", "${profile.dailyHours} hrs/day • ${profile.targetDate}")
+                DashInfoRow("Standard", profile.standard)
+                DashInfoRow("Courses", profile.courses)
+                DashInfoRow("Focus Areas", profile.interests)
+                DashInfoRow("Study Plan", "${profile.dailyHours} hrs/day • ${profile.targetDate}")
                 DashInfoRow("Language", profile.preferredLanguage)
-                DashInfoRow("Total App Opens", "$visitCount")
-                DashInfoRow("Recorded Active Days", "${activeDates.size.coerceAtLeast(1)} day(s)")
+                DashInfoRow("App Open Count", "$visitCount")
+                DashInfoRow("Active Days", "${activeDates.size.coerceAtLeast(1)} day(s)")
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -209,6 +367,7 @@ fun DashboardScreen(
             }
         }
 
+        // Assessment Score History Card
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
@@ -258,6 +417,7 @@ fun DashboardScreen(
             }
         }
 
+        // Sign Out / Switch Account Button
         OutlinedButton(
             onClick = onSignOut,
             modifier = Modifier

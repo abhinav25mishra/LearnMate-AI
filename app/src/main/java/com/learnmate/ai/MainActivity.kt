@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
@@ -172,8 +173,11 @@ fun VicharaXApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                                     Text(
                                         text = "VicharaX",
                                         fontWeight = FontWeight.ExtraBold,
-                                        fontSize = 18.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        fontSize = 17.sp,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Clip
                                     )
                                     Text(
                                         text = when {
@@ -605,6 +609,15 @@ fun HomeDashboardTab(
                 }
             }
         }
+
+// Visual Improvement Graph Card on Home
+        val homeAssessmentHistory = remember(profile.name) {
+            ProfileStorage.loadAssessmentScores(context, profile.name)
+        }
+        ImprovementGraphCard(
+            assessmentHistory = homeAssessmentHistory,
+            topicMasteryPct = completionPct
+        )
 
         // Single Clean Subject Roadmap Card (No duplicate Assessment or AI Mentor cards)
         Surface(

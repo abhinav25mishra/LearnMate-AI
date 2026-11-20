@@ -9,6 +9,18 @@ object TopicGuardrail {
             "array", "loop", "for", "while", "do while", "switch", "function", "recursion",
             "variable", "int", "float", "char", "double", "void", "sizeof", "compile", "gcc"
         ),
+"history" to setOf(
+            "history", "historical", "empire", "dynasty", "king", "emperor", "queen", "war",
+            "battle", "revolution", "independence", "ancient", "medieval", "modern", "civilization",
+            "mughal", "akbar", "ashoka", "gupta", "maurya", "british", "treaty", "constitution",
+            "century", "timeline", "monument", "heritage", "freedom", "struggle", "world war"
+        ),
+        "geography" to setOf(
+            "geography", "earth", "continent", "ocean", "river", "mountain", "plateau", "climate",
+            "monsoon", "weather", "latitude", "longitude", "equator", "hemisphere", "soil", "forest",
+            "glacier", "volcano", "earthquake", "tectonic", "atmosphere", "biosphere", "map", "region",
+            "country", "capital", "population", "resource", "agriculture", "delta", "peninsula"
+        ),
         "python" to setOf(
             "python", "py", "pip", "def", "class", "list", "tuple", "dict", "dictionary",
             "set", "loop", "for", "while", "if", "else", "elif", "function", "lambda",

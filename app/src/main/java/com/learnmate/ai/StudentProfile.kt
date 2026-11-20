@@ -9,6 +9,8 @@ import org.json.JSONObject
 
 data class StudentProfile(
     val name: String = "",
+    val standard: String = "Undergraduate / College",
+    val courses: String = "Computer Science & Core Subjects",
     val goal: String = "",
     val subject: String = "Python",
     val skillLevel: String = "Beginner",
@@ -52,6 +54,8 @@ object ProfileStorage {
         accounts.forEach { acc ->
             arr.put(JSONObject().apply {
                 put("name", acc.name)
+                put("standard", acc.standard)
+                put("courses", acc.courses)
                 put("goal", acc.goal)
                 put("subject", acc.subject)
                 put("skillLevel", acc.skillLevel)
@@ -83,6 +87,8 @@ object ProfileStorage {
                 list.add(
                     StudentProfile(
                         name = obj.optString("name", ""),
+                        standard = obj.optString("standard", "Undergraduate / College"),
+                        courses = obj.optString("courses", "Core Curriculum"),
                         goal = obj.optString("goal", ""),
                         subject = obj.optString("subject", "Python"),
                         skillLevel = obj.optString("skillLevel", "Beginner"),
@@ -143,12 +149,6 @@ object ProfileStorage {
         return next
     }
 
-    fun getVisitCount(context: Context, userName: String): Int {
-        val key = KEY_VISIT_PREFIX + userName.trim().lowercase()
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(key, 1)
-    }
-
-    // Strictly automatic, activity-driven active-day persistence (cannot be manually toggled)
     fun recordActivityToday(context: Context, userName: String) {
         if (userName.isBlank()) return
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -168,7 +168,7 @@ object ProfileStorage {
     fun getActiveWeekDayIndices(context: Context, userName: String): Set<Int> {
         val dates = getActiveDateStrings(context, userName)
         val parser = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val dayFmt = SimpleDateFormat("u", Locale.US) // 1 = Monday .. 7 = Sunday
+        val dayFmt = SimpleDateFormat("u", Locale.US)
         val indices = mutableSetOf<Int>()
         dates.forEach { dateStr ->
             try {
@@ -204,7 +204,7 @@ object ProfileStorage {
         val existing = loadAssessmentScores(context, userName).toMutableList()
         existing.add(0, record)
         val arr = JSONArray()
-        existing.take(10).forEach { r ->
+        existing.take(12).forEach { r ->
             arr.put(JSONObject().apply {
                 put("subject", r.subject)
                 put("score", r.score)
