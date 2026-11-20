@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.OfflineBolt
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
@@ -119,6 +120,7 @@ fun LearnMateApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
         }
         val tabs = listOf(
             NavTab(strings.tabHome, Icons.Default.Home),
+            NavTab("Assessment", Icons.Default.Quiz),
             NavTab(strings.tabRoadmap, Icons.Default.Map),
             NavTab(strings.tabMentor, Icons.Default.AutoAwesome)
         )
@@ -279,8 +281,17 @@ fun LearnMateApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                                     profile = null
                                 }
                             )
-                            1 -> RoadmapScreen(profile = currentProfile, strings = strings)
-                            2 -> MentorChatScreen(profile = currentProfile, strings = strings)
+                            1 -> AssessmentScreen(
+                                profile = currentProfile,
+                                strings = strings,
+                                onNavigateToRoadmap = { selectedTab = 2 }
+                            )
+                            2 -> RoadmapScreen(
+                                profile = currentProfile,
+                                strings = strings,
+                                onNavigateToAssessment = { selectedTab = 1 }
+                            )
+                            3 -> MentorChatScreen(profile = currentProfile, strings = strings)
                         }
                     }
                 }
@@ -595,7 +606,7 @@ fun HomeDashboardTab(
             }
 
             Surface(
-                onClick = { onNavigate(2) },
+                onClick = { onNavigate(3) },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.surface,
