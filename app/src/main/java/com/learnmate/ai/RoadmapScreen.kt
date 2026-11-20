@@ -76,7 +76,7 @@ fun RoadmapScreen(
                         )
                     }
                     Text(
-                        text = "Take the 10-question diagnostic assessment in the Assessment tab first so LearnMate AI can map your weak prerequisites and generate your weekly timeline.",
+                        text = "Take the 10-question diagnostic assessment in the Assessment tab first so VicharaX can map your weak prerequisites and generate your weekly timeline.",
                         fontSize = 13.sp,
                         lineHeight = 19.sp,
                         color = Color(0xFFE0F2FE)

@@ -54,7 +54,7 @@ fun MentorChatScreen(
             ""
         }
         ChatMessage(
-            sender = "LearnMate AI",
+            sender = "VicharaX",
             text = "Namaste ${profile.name}! I'm your offline ${profile.subject} mentor (${profile.preferredLanguage}).$gapNote Ask me any concept or tap a prompt below!"
         )
     }
@@ -86,7 +86,7 @@ val selectedTopic = profile.subject.ifBlank { "Python" }
         val extraTopics = (gapReport?.weakTopics ?: emptyList()) + (gapReport?.missingPrerequisites ?: emptyList())
         if (!TopicGuardrail.isQuestionAllowed(q, selectedTopic, extraTopics)) {
             val refusalMsg = TopicGuardrail.buildRefusalMessage(selectedTopic)
-            val updated = withUser + ChatMessage("LearnMate AI", refusalMsg)
+            val updated = withUser + ChatMessage("VicharaX", refusalMsg)
             messages = updated
             AppStorage.saveChatHistory(context, updated)
             isThinking = false
@@ -105,11 +105,11 @@ val selectedTopic = profile.subject.ifBlank { "Python" }
             val finalReply = mentorEngine.askMentorStream(contextualPrompt, profile, difficulty, hintOnly) { partialText ->
                 isThinking = false
                 val cleaned = partialText.replace("**", "").replace("```python", "").replace("```sql", "").replace("```", "")
-                messages = baseMessages + ChatMessage("LearnMate AI", cleaned)
+                messages = baseMessages + ChatMessage("VicharaX", cleaned)
             }
             isThinking = false
             val cleanedFinal = finalReply.replace("**", "").replace("```python", "").replace("```sql", "").replace("```", "")
-            messages = baseMessages + ChatMessage("LearnMate AI", cleanedFinal)
+            messages = baseMessages + ChatMessage("VicharaX", cleanedFinal)
             AppStorage.saveChatHistory(context, messages)
         }
     }
@@ -225,7 +225,7 @@ val selectedTopic = profile.subject.ifBlank { "Python" }
                     ) {
                         Column(modifier = Modifier.padding(13.dp)) {
                             Text(
-                                text = if (isUser) "You" else "LearnMate AI • Offline",
+                                text = if (isUser) "You" else "VicharaX • Offline",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.sp,
                                 color = if (isUser) Color(0xFFBAE6FD) else Color(0xFF0D9488)

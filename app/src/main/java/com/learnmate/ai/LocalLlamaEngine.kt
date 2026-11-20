@@ -67,7 +67,7 @@ object LocalLlamaEngine : AiMentorEngine {
                 null
             }
         } catch (t: Throwable) {
-            Log.e("LearnMateLLM", "Model load error", t)
+            Log.e("VicharaXLLM", "Model load error", t)
             null
         } finally {
             isLoading = false
@@ -84,7 +84,7 @@ object LocalLlamaEngine : AiMentorEngine {
         val cleanQuestion = question.substringAfter("]").trim().ifEmpty { question.trim() }
         val modeNote = if (hintOnly) "Give a concise hint." else "Answer clearly and completely with an example."
         return "<|start_header_id|>system<|end_header_id|>\n\n" +
-            "You are LearnMate AI, a strict $selectedTopic tutor ($difficulty, $preferredLanguage). " +
+            "You are VicharaX, a strict $selectedTopic tutor ($difficulty, $preferredLanguage). " +
             "Only answer questions about $selectedTopic. If unrelated to $selectedTopic, refuse immediately. $modeNote<|eot_id|>" +
             "<|start_header_id|>user<|end_header_id|>\n\n" +
             "$cleanQuestion<|eot_id|>" +
@@ -188,7 +188,7 @@ object LocalLlamaEngine : AiMentorEngine {
                         return@withContext finalResponse
                     }
                 } catch (t: Throwable) {
-                    Log.e("LearnMateLLM", "ExecuTorch fallback triggered", t)
+                    Log.e("VicharaXLLM", "ExecuTorch fallback triggered", t)
                 }
             }
         } else {

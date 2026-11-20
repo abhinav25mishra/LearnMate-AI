@@ -363,6 +363,9 @@ fun AssessmentScreen(
                     evaluationReport = report
                     isSubmitted = true
                     AppStorage.saveRoadmapData(context, report, newRoadmap)
+                    val scoreVal = questions.count { q -> selectedAnswers[q.id] == q.correctIndex }
+                    val timeStr = java.text.SimpleDateFormat("dd MMM, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
+                    ProfileStorage.saveAssessmentScore(context, profile.name, AssessmentRecord(profile.subject, scoreVal, questions.size, report.assignedLevel, timeStr))
                 },
                 enabled = selectedAnswers.size == questions.size,
                 modifier = Modifier

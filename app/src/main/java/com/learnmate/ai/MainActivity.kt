@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -39,14 +40,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-private val LightLearnMateScheme = lightColorScheme(
+private val LightVicharaXScheme = lightColorScheme(
     primary = Color(0xFF1D4ED8),
     onPrimary = Color.White,
     primaryContainer = Color(0xFFDBEAFE),
@@ -63,7 +63,7 @@ private val LightLearnMateScheme = lightColorScheme(
     outlineVariant = Color(0xFFE2E8F0)
 )
 
-private val DarkLearnMateScheme = darkColorScheme(
+private val DarkVicharaXScheme = darkColorScheme(
     primary = Color(0xFF60A5FA),
     onPrimary = Color(0xFF0F172A),
     primaryContainer = Color(0xFF1E3A8A),
@@ -87,29 +87,40 @@ class MainActivity : ComponentActivity() {
         setContent {
             LaunchedEffect(Unit) { LocalLlamaEngine.warmUp() }
             var isDarkMode by remember { mutableStateOf(false) }
-            MaterialTheme(colorScheme = if (isDarkMode) DarkLearnMateScheme else LightLearnMateScheme) {
-                LearnMateApp(isDarkMode = isDarkMode, onToggleDarkMode = { isDarkMode = !isDarkMode })
+            MaterialTheme(colorScheme = if (isDarkMode) DarkVicharaXScheme else LightVicharaXScheme) {
+                VicharaXApp(isDarkMode = isDarkMode, onToggleDarkMode = { isDarkMode = !isDarkMode })
             }
         }
     }
 }
 
-private data class NavTab(val label: String, val icon: ImageVector)
+private data class NavTab(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LearnMateApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
+fun VicharaXApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
     val context = LocalContext.current
     var profile by remember { mutableStateOf(ProfileStorage.loadProfile(context)) }
     var selectedTab by remember { mutableStateOf(0) }
     var showPerfScreen by remember { mutableStateOf(false) }
+    var showDashboardScreen by remember { mutableStateOf(false) }
+    var visitCount by remember { mutableStateOf(1) }
+
+    // Track app opens/visits once per session for the active signed-in user
+    LaunchedEffect(profile?.name) {
+        profile?.let { active ->
+            visitCount = ProfileStorage.incrementAndGetVisitCount(context, active.name)
+        }
+    }
 
     if (profile == null) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             OnboardingScreen(
-                onComplete = { newProfile ->
-                    ProfileStorage.saveProfile(context, newProfile)
-                    profile = newProfile
+                onComplete = { authenticatedProfile ->
+                    profile = authenticatedProfile
+                    showDashboardScreen = false
+                    showPerfScreen = false
+                    selectedTab = 0
                 }
             )
         }
@@ -131,51 +142,75 @@ fun LearnMateApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                 Surface(shadowElevation = 2.dp, color = MaterialTheme.colorScheme.surface) {
                     TopAppBar(
                         navigationIcon = {
-                            if (showPerfScreen) {
-                                IconButton(onClick = { showPerfScreen = false }) {
+                            if (showPerfScreen || showDashboardScreen) {
+                                IconButton(
+                                    onClick = {
+                                        showPerfScreen = false
+                                        showDashboardScreen = false
+                                    }
+                                ) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                         contentDescription = "Back",
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
+                            } else {
+                                // Compact Top-Left Dashboard / Profile Trigger Badge
+                                Surface(
+                                    onClick = {
+                                        showPerfScreen = false
+                                        showDashboardScreen = true
+                                    },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                                    modifier = Modifier.padding(start = 10.dp, end = 6.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Dashboard,
+                                            contentDescription = "Open Dashboard",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = currentProfile.name.take(1).uppercase(),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
                             }
                         },
                         title = {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(Color(0xFF1D4ED8), Color(0xFF0D9488))
-                                            )
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.AutoAwesome,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
+                                VxBrandMark(sizeDp = 30)
                                 Column {
                                     Text(
-                                        text = "LearnMate AI",
+                                        text = "VicharaX",
                                         fontWeight = FontWeight.ExtraBold,
                                         fontSize = 17.sp,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = if (showPerfScreen) "Arm & ExecuTorch Metrics" else "Arm Edge Mentor",
+                                        text = when {
+                                            showDashboardScreen -> "Learner Dashboard"
+                                            showPerfScreen -> "Arm & ExecuTorch Metrics"
+                                            else -> "Topic: ${currentProfile.subject}"
+                                        },
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1
                                     )
                                 }
                             }
@@ -189,7 +224,12 @@ fun LearnMateApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            IconButton(onClick = { showPerfScreen = !showPerfScreen }) {
+                            IconButton(
+                                onClick = {
+                                    showDashboardScreen = false
+                                    showPerfScreen = !showPerfScreen
+                                }
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.Speed,
                                     contentDescription = "Arm & ExecuTorch Performance",
@@ -197,31 +237,34 @@ fun LearnMateApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                                 )
                             }
                             Surface(
-                             onClick = { showPerfScreen = true },
-                             shape = RoundedCornerShape(20.dp),
-                             color = MaterialTheme.colorScheme.secondaryContainer,
-                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)),
-                             modifier = Modifier.padding(end = 10.dp)
-                         ) {
-                             Row(
-                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                 verticalAlignment = Alignment.CenterVertically,
-                                 horizontalArrangement = Arrangement.spacedBy(3.dp)
-                             ) {
-                                 Icon(
-                                     imageVector = Icons.Default.OfflineBolt,
-                                     contentDescription = null,
-                                     tint = MaterialTheme.colorScheme.secondary,
-                                     modifier = Modifier.size(13.dp)
-                                 )
-                                 Text(
-                                     text = strings.offlineBadge,
-                                     fontSize = 10.sp,
-                                     fontWeight = FontWeight.Bold,
-                                     color = MaterialTheme.colorScheme.onSecondaryContainer
-                                 )
-                             }
-                         }
+                                onClick = {
+                                    showDashboardScreen = false
+                                    showPerfScreen = true
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)),
+                                modifier = Modifier.padding(end = 10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.OfflineBolt,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.secondary,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = strings.offlineBadge,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
                         }
                     )
                 }
@@ -230,11 +273,12 @@ fun LearnMateApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                 Surface(shadowElevation = 10.dp, color = MaterialTheme.colorScheme.surface) {
                     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                         tabs.forEachIndexed { index, tab ->
-                            val isSelected = !showPerfScreen && selectedTab == index
+                            val isSelected = !showPerfScreen && !showDashboardScreen && selectedTab == index
                             NavigationBarItem(
                                 selected = isSelected,
                                 onClick = {
                                     showPerfScreen = false
+                                    showDashboardScreen = false
                                     selectedTab = index
                                 },
                                 icon = { Icon(imageVector = tab.icon, contentDescription = tab.label) },
@@ -263,35 +307,53 @@ fun LearnMateApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                     .padding(innerPadding)
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                if (showPerfScreen) {
-                    PerformanceScreen()
-                } else {
-                    Crossfade(
-                        targetState = selectedTab,
-                        animationSpec = tween(durationMillis = 200),
-                        label = "tabTransition"
-                    ) { tabIndex ->
-                        when (tabIndex) {
-                            0 -> HomeDashboardTab(
-                                profile = currentProfile,
-                                strings = strings,
-                                onNavigate = { target -> selectedTab = target },
-                                onResetProfile = {
-                                    ProfileStorage.clearProfile(context)
-                                    profile = null
-                                }
-                            )
-                            1 -> AssessmentScreen(
-                                profile = currentProfile,
-                                strings = strings,
-                                onNavigateToRoadmap = { selectedTab = 2 }
-                            )
-                            2 -> RoadmapScreen(
-                                profile = currentProfile,
-                                strings = strings,
-                                onNavigateToAssessment = { selectedTab = 1 }
-                            )
-                            3 -> MentorChatScreen(profile = currentProfile, strings = strings)
+                when {
+                    showDashboardScreen -> {
+                        DashboardScreen(
+                            profile = currentProfile,
+                            visitCount = visitCount,
+                            onSwitchTopic = { newTopic ->
+                                val updated = currentProfile.copy(subject = newTopic)
+                                ProfileStorage.saveProfile(context, updated)
+                                profile = updated
+                            },
+                            onSignOut = {
+                                ProfileStorage.signOut(context)
+                                showDashboardScreen = false
+                                showPerfScreen = false
+                                profile = null
+                            }
+                        )
+                    }
+                    showPerfScreen -> {
+                        PerformanceScreen()
+                    }
+                    else -> {
+                        Crossfade(
+                            targetState = selectedTab,
+                            animationSpec = tween(durationMillis = 200),
+                            label = "tabTransition"
+                        ) { tabIndex ->
+                            when (tabIndex) {
+                                0 -> HomeDashboardTab(
+                                    profile = currentProfile,
+                                    visitCount = visitCount,
+                                    strings = strings,
+                                    onNavigate = { target -> selectedTab = target },
+                                    onOpenDashboard = { showDashboardScreen = true }
+                                )
+                                1 -> AssessmentScreen(
+                                    profile = currentProfile,
+                                    strings = strings,
+                                    onNavigateToRoadmap = { selectedTab = 2 }
+                                )
+                                2 -> RoadmapScreen(
+                                    profile = currentProfile,
+                                    strings = strings,
+                                    onNavigateToAssessment = { selectedTab = 1 }
+                                )
+                                3 -> MentorChatScreen(profile = currentProfile, strings = strings)
+                            }
                         }
                     }
                 }
@@ -303,9 +365,10 @@ fun LearnMateApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
 @Composable
 fun HomeDashboardTab(
     profile: StudentProfile,
+    visitCount: Int,
     strings: UiStrings,
     onNavigate: (Int) -> Unit,
-    onResetProfile: () -> Unit
+    onOpenDashboard: () -> Unit
 ) {
     val context = LocalContext.current
     val savedRoadmap = remember { AppStorage.loadRoadmap(context) }
@@ -314,11 +377,9 @@ fun HomeDashboardTab(
     val completionPct = if (savedRoadmap.isEmpty()) 0 else (completedModules * 100) / savedRoadmap.size
     var dailyGoalChecked by remember { mutableStateOf(false) }
 
-    // 7-Day Consistency Strip State
     val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
     var activeDays by remember { mutableStateOf(setOf(0, 1)) }
 
-    // 25-Minute Study Focus Timer State
     var secondsLeft by remember { mutableStateOf(25 * 60) }
     var isTimerRunning by remember { mutableStateOf(false) }
 
@@ -330,9 +391,7 @@ fun HomeDashboardTab(
         if (secondsLeft == 0) isTimerRunning = false
     }
 
-    val mins = secondsLeft / 60
-    val secs = secondsLeft % 60
-    val formattedTimer = "%02d:%02d".format(mins, secs)
+    val formattedTimer = "%02d:%02d".format(secondsLeft / 60, secondsLeft % 60)
 
     Column(
         modifier = Modifier
@@ -340,13 +399,13 @@ fun HomeDashboardTab(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Hero Banner with Radial Mastery Progress
+        // Hero Banner
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
                     brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF1E3A8A), Color(0xFF1D4ED8), Color(0xFF0D9488))
+                        colors = listOf(Color(0xFF0F172A), Color(0xFF1D4ED8), Color(0xFF0D9488))
                     ),
                     shape = RoundedCornerShape(22.dp)
                 )
@@ -374,7 +433,7 @@ fun HomeDashboardTab(
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
-                                text = "${activeDays.size}-DAY STREAK â€¢ ON-DEVICE",
+                                text = "VISIT #$visitCount • VICHARAX OFFLINE",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -398,7 +457,7 @@ fun HomeDashboardTab(
                         color = Color(0xFF0F172A).copy(alpha = 0.35f)
                     ) {
                         Text(
-                            text = "${profile.subject} â€¢ ${profile.skillLevel}",
+                            text = "${profile.subject} • ${savedGapReport?.assignedLevel ?: profile.skillLevel}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFFCCFBF1),
@@ -409,7 +468,6 @@ fun HomeDashboardTab(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Circular Progress Ring
                 Box(
                     modifier = Modifier.size(74.dp),
                     contentAlignment = Alignment.Center
@@ -479,7 +537,7 @@ fun HomeDashboardTab(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = if (checked) "âœ“" else day.take(1),
+                                    text = if (checked) "✓" else day.take(1),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (checked) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
@@ -521,7 +579,7 @@ fun HomeDashboardTab(
                     }
                     Text("${profile.dailyHours} hrs/day", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
                     Text(
-                        text = if (dailyGoalChecked) "Logged offline âœ“" else "Tap to check in",
+                        text = if (dailyGoalChecked) "Logged offline ✓" else "Tap to check in",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -536,15 +594,9 @@ fun HomeDashboardTab(
                 shadowElevation = 1.dp
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Icon(Icons.Default.Timer, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(16.dp))
-                            Text("Focus Sprint", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Default.Timer, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(16.dp))
+                        Text("Focus Sprint", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                     Text(formattedTimer, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -594,11 +646,11 @@ fun HomeDashboardTab(
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Map, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.Quiz, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     }
-                    Text(strings.studyRoadmap, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("10-MCQ Assessment", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Text(
-                        text = if (savedRoadmap.isEmpty()) strings.diagnosticDesc else "$completedModules/${savedRoadmap.size} modules done",
+                        text = "Evaluate ${profile.subject} skills with instant answer review",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -623,68 +675,46 @@ fun HomeDashboardTab(
                     ) {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                     }
-                    Text(strings.aiMentor, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text(strings.askDoubtsDesc, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("VicharaX AI Mentor", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("Topic-scoped offline Llama 3.2 tutor", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
 
-        // Skill-Gap & Profile Summary Card
+        // Open Full Learner Dashboard Card
         Surface(
+            onClick = onOpenDashboard,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             shadowElevation = 1.dp
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Text(strings.learningProfile, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (savedGapReport != null) Color(0xFFCCFBF1) else Color(0xFFFEF3C7)
-                    ) {
-                        Text(
-                            text = if (savedGapReport != null) "Gaps Mapped" else "Diagnostic Pending",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (savedGapReport != null) Color(0xFF0F766E) else Color(0xFF92400E),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
+            Row(
+                modifier = Modifier.padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Column {
+                        Text("Learner Dashboard & Credentials", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text("View profile, passcode, visit count & score history", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                ProfileDetailRow("Daily Commitment", "${profile.dailyHours} hrs/day")
-                ProfileDetailRow("Target Timeline", profile.targetDate)
-                ProfileDetailRow("Regional Language", profile.preferredLanguage)
-                ProfileDetailRow("Personal Interests", profile.interests)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Text(
+                        text = "Open",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
-
-        OutlinedButton(
-            onClick = onResetProfile,
-            modifier = Modifier.fillMaxWidth().height(46.dp),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(strings.resetProfile, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-@Composable
-private fun ProfileDetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
