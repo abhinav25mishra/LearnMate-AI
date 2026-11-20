@@ -195,6 +195,238 @@ object LearningEngine {
             )
         }
 
+if (subjLower.contains("sql") || subjLower.contains("database") || subjLower.contains("dbms")) {
+            return listOf(
+                SubjectTopicNode(
+                    id = "sql_1", order = 1, title = "Relational Model & DDL Schema Design",
+                    summary = "Tables, rows, columns, data types (INT, VARCHAR, DATE), CREATE/ALTER/DROP, and constraints.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Understand structured tabular data, primary keys, and entity relationships.",
+                        "2. Schema Creation: Create normalized tables using CREATE TABLE with PRIMARY KEY, NOT NULL, UNIQUE, and CHECK.",
+                        "3. Schema Evolution: Modify columns and constraints safely with ALTER TABLE.",
+                        "4. Mastery Check: Design a multi-table Student-Course-Enrollment database schema from scratch."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("PostgreSQL Official Tutorial: SQL Language", "https://www.postgresql.org/docs/current/tutorial-sql.html"),
+                        LearningResourceLink("W3Schools: SQL CREATE TABLE & Constraints", "https://www.w3schools.com/sql/sql_create_table.asp")
+                    )
+                ),
+                SubjectTopicNode(
+                    id = "sql_2", order = 2, title = "SELECT Queries, Filtering & Sorting",
+                    summary = "SELECT, DISTINCT, WHERE operators (IN, BETWEEN, LIKE), ORDER BY, and LIMIT/OFFSET.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Basic table structure and comparison/logical operators.",
+                        "2. Projection & Filtering: Query specific columns and filter rows with WHERE, AND/OR, IN, and LIKE.",
+                        "3. Sorting & Pagination: Order result sets with ORDER BY ASC/DESC and paginate with LIMIT/OFFSET.",
+                        "4. Mastery Check: Write analytical filter queries on an e-commerce orders table."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("SQLBolt: Interactive SQL Lessons 1–5", "https://sqlbolt.com/"),
+                        LearningResourceLink("GeeksforGeeks: SQL SELECT & WHERE Clause", "https://www.geeksforgeeks.org/sql-select-query/")
+                    )
+                ),
+                SubjectTopicNode(
+                    id = "sql_3", order = 3, title = "SQL Joins & Subqueries",
+                    summary = "INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL OUTER JOIN, SELF JOIN, and correlated subqueries.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Primary keys, foreign keys, and single-table SELECT queries.",
+                        "2. Relational Joins: Combine related tables using INNER JOIN and preserve unmatched rows with LEFT JOIN.",
+                        "3. Nested Queries & CTEs: Structure readable multi-step queries with Common Table Expressions (WITH).",
+                        "4. Mastery Check: Find customers with zero orders using LEFT JOIN + IS NULL."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("SQLBolt: Multi-Table Queries with JOINs", "https://sqlbolt.com/lesson/select_queries_with_joins"),
+                        LearningResourceLink("GeeksforGeeks: SQL Join Types Explained", "https://www.geeksforgeeks.org/sql-join-set-1-inner-left-right-and-full-joins/")
+                    )
+                ),
+                SubjectTopicNode(
+                    id = "sql_4", order = 4, title = "Aggregations, GROUP BY & Window Functions",
+                    summary = "COUNT, SUM, AVG, MIN/MAX, GROUP BY, HAVING, and OVER (PARTITION BY ... ORDER BY ...).",
+                    flowSteps = listOf(
+                        "1. Prerequisite: WHERE filtering and relational joins.",
+                        "2. Grouped Summaries: Aggregate metrics per category with GROUP BY and filter groups using HAVING.",
+                        "3. Window Functions: Compute running totals and rankings using ROW_NUMBER(), RANK(), and LAG/LEAD.",
+                        "4. Mastery Check: Rank the top 3 highest-paid employees per department using DENSE_RANK()."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("PostgreSQL Docs: Window Functions", "https://www.postgresql.org/docs/current/tutorial-window.html"),
+                        LearningResourceLink("Mode SQL Tutorial: GROUP BY & HAVING", "https://mode.com/sql-tutorial/sql-group-by/")
+                    )
+                ),
+                SubjectTopicNode(
+                    id = "sql_5", order = 5, title = "Normalization, Indexes & ACID Transactions",
+                    summary = "1NF, 2NF, 3NF, B-Tree indexing, EXPLAIN query plans, and COMMIT/ROLLBACK transactions.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Primary/foreign keys and multi-table SQL queries.",
+                        "2. Normalization: Eliminate update anomalies across 1NF, 2NF, and 3NF.",
+                        "3. Indexing & Optimization: Accelerate lookups with composite B-Tree indexes and inspect EXPLAIN plans.",
+                        "4. Mastery Check: Wrap multi-step balance transfers inside atomic BEGIN / COMMIT / ROLLBACK transactions."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("GeeksforGeeks: Database Normalization (1NF–3NF)", "https://www.geeksforgeeks.org/normal-forms-in-dbms/"),
+                        LearningResourceLink("Use The Index, Luke: SQL Indexing Guide", "https://use-the-index-luke.com/")
+                    )
+                )
+            )
+        }
+
+        if (subjLower.contains("machine learning") || subjLower.contains("ml") || subjLower.contains("ai")) {
+            return listOf(
+                SubjectTopicNode(
+                    id = "ml_1", order = 1, title = "Data Preprocessing & Exploratory Analysis",
+                    summary = "Handling missing values, feature scaling, train/val/test splits, and data leakage prevention.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Basic statistics (mean, standard deviation) and tabular arrays/dataframes.",
+                        "2. Data Cleaning: Impute missing values, encode categorical variables, and remove outliers.",
+                        "3. Splitting & Scaling: Split train/validation/test sets before applying StandardScaler or MinMaxScaler.",
+                        "4. Mastery Check: Build a leak-free preprocessing pipeline on a real tabular dataset."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("Scikit-Learn: Preprocessing Data Guide", "https://scikit-learn.org/stable/modules/preprocessing.html"),
+                        LearningResourceLink("Google ML Crash Course: Working with Numerical Data", "https://developers.google.com/machine-learning/crash-course")
+                    )
+                ),
+                SubjectTopicNode(
+                    id = "ml_2", order = 2, title = "Supervised Learning: Regression & Classification",
+                    summary = "Linear Regression, Logistic Regression, Decision Trees, Random Forests, and Gradient Descent.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Preprocessed feature matrices and loss functions (MSE, Cross-Entropy).",
+                        "2. Regression Models: Predict continuous targets and optimize weights via Gradient Descent.",
+                        "3. Classification Models: Train Logistic Regression, Random Forests, and Gradient Boosted Trees.",
+                        "4. Mastery Check: Compare model generalization and tune hyperparameters using k-fold cross-validation."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("Scikit-Learn: Supervised Learning Algorithms", "https://scikit-learn.org/stable/supervised_learning.html"),
+                        LearningResourceLink("GeeksforGeeks: Machine Learning Algorithms", "https://www.geeksforgeeks.org/machine-learning-algorithms/")
+                    )
+                ),
+                SubjectTopicNode(
+                    id = "ml_3", order = 3, title = "Evaluation Metrics & Bias-Variance Tradeoff",
+                    summary = "Confusion matrix, Precision, Recall, F1-Score, ROC-AUC, overfitting, and L1/L2 regularization.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Binary/multiclass predictions and validation splits.",
+                        "2. Diagnostic Curves: Diagnose high bias (underfitting) vs high variance (overfitting).",
+                        "3. Metric Selection: Choose Precision/Recall/F1 for imbalanced datasets and RMSE/R2 for regression.",
+                        "4. Mastery Check: Apply L1/L2 regularization and cross-validation to eliminate overfitting."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("Scikit-Learn: Model Evaluation & Scoring", "https://scikit-learn.org/stable/modules/model_evaluation.html"),
+                        LearningResourceLink("Google ML Crash Course: Classification Metrics", "https://developers.google.com/machine-learning/crash-course/classification")
+                    )
+                ),
+                SubjectTopicNode(
+                    id = "ml_4", order = 4, title = "Neural Networks, Transformers & Edge Quantization",
+                    summary = "Perceptrons, backpropagation, self-attention, and INT4 quantization on Arm mobile CPUs.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Matrix multiplication, derivatives, and gradient descent.",
+                        "2. Deep Learning Core: Build multi-layer perceptrons with ReLU activations and backpropagation.",
+                        "3. Transformers & LLMs: Understand tokenization, embeddings, and causal self-attention.",
+                        "4. Mastery Check: Export and run INT4-quantized models locally via PyTorch ExecuTorch on Arm."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("PyTorch Official Tutorials", "https://pytorch.org/tutorials/"),
+                        LearningResourceLink("PyTorch ExecuTorch: On-Device LLM Docs", "https://pytorch.org/executorch/stable/llm/getting-started.html")
+                    )
+                )
+            )
+        }
+
+        if (subjLower.contains("math")) {
+            return listOf(
+                SubjectTopicNode(
+                    id = "math_1", order = 1, title = "Linear Algebra: Matrices & Vectors",
+                    summary = "Vector spaces, matrix multiplication, determinants, eigenvalues, and linear systems.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Algebraic equations and coordinate geometry.",
+                        "2. Matrix Operations: Master addition, dot products, matrix multiplication, and transpose.",
+                        "3. Determinants & Inverses: Solve linear systems Ax = b and compute eigenvalues/eigenvectors.",
+                        "4. Mastery Check: Solve 3x3 systems using Gaussian elimination and verify orthogonality."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("Khan Academy: Linear Algebra", "https://www.khanacademy.org/math/linear-algebra"),
+                        LearningResourceLink("Paul's Online Math Notes: Linear Algebra", "https://tutorial.math.lamar.edu/")
+                    )
+                ),
+                SubjectTopicNode(
+                    id = "math_2", order = 2, title = "Differential & Integral Calculus",
+                    summary = "Limits, derivatives, chain rule, partial derivatives, optimization, and definite integrals.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Functions, trigonometry, and algebraic manipulation.",
+                        "2. Differentiation: Apply product, quotient, and chain rules to find rates of change.",
+                        "3. Multivariable Gradients: Compute partial derivatives and locate local minima/maxima.",
+                        "4. Mastery Check: Evaluate definite integrals and solve constrained optimization problems."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("Paul's Online Math Notes: Calculus I–III", "https://tutorial.math.lamar.edu/Classes/CalcI/CalcI.aspx"),
+                        LearningResourceLink("Khan Academy: Calculus", "https://www.khanacademy.org/math/calculus-1")
+                    )
+                ),
+                SubjectTopicNode(
+                    id = "math_3", order = 3, title = "Probability & Statistical Distributions",
+                    summary = "Conditional probability, Bayes' theorem, Binomial/Poisson/Normal distributions, and regression.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Combinatorics (permutations & combinations) and basic integration.",
+                        "2. Probability Rules: Master Bayes' theorem and discrete/continuous random variables.",
+                        "3. Distributions & Inference: Analyze mean, variance, standard deviation, and linear regression.",
+                        "4. Mastery Check: Compute confidence intervals and correlation coefficients on sample data."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("Khan Academy: Statistics & Probability", "https://www.khanacademy.org/math/statistics-probability"),
+                        LearningResourceLink("GeeksforGeeks: Engineering Mathematics", "https://www.geeksforgeeks.org/engineering-mathematics-tutorials/")
+                    )
+                )
+            )
+        }
+
+        if (!subjLower.contains("python") && subjLower.isNotBlank()) {
+            val encoded = java.net.URLEncoder.encode(subject.trim(), "UTF-8")
+            val topicName = subject.trim()
+            return listOf(
+                SubjectTopicNode(
+                    id = "custom_1", order = 1, title = "Core Foundations of $topicName",
+                    summary = "Essential terminology, core principles, mental models, and basic building blocks of $topicName.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Clarify the foundational vocabulary and problem domain of $topicName.",
+                        "2. Core Principles: Study the primary rules, syntax/notation, and standard conventions.",
+                        "3. Guided Examples: Walk through 3 beginner examples step by step.",
+                        "4. Mastery Check: Explain the core concepts of $topicName in your own words without notes."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("GeeksforGeeks: $topicName Tutorials", "https://www.geeksforgeeks.org/search/?q=$encoded"),
+                        LearningResourceLink("Wikipedia: $topicName Overview", "https://en.wikipedia.org/w/index.php?search=$encoded")
+                    )
+                ),
+                SubjectTopicNode(
+                    id = "custom_2", order = 2, title = "Intermediate Techniques & Problem Solving in $topicName",
+                    summary = "Structured workflows, standard patterns, edge-case handling, and analytical methods.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Mastery of foundational definitions and basic examples in $topicName.",
+                        "2. Core Patterns: Learn the most common problem-solving techniques used in $topicName.",
+                        "3. Edge Cases & Debugging: Identify common mistakes and verify boundary conditions.",
+                        "4. Mastery Check: Solve 5 intermediate practice problems independently."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("Khan Academy: Search $topicName", "https://www.khanacademy.org/search?page_search_query=$encoded"),
+                        LearningResourceLink("GeeksforGeeks: $topicName Practice", "https://www.geeksforgeeks.org/search/?q=$encoded+examples")
+                    )
+                ),
+                SubjectTopicNode(
+                    id = "custom_3", order = 3, title = "Applied Mastery & Capstone in $topicName",
+                    summary = "End-to-end synthesis, real-world case studies, optimization, and self-assessment.",
+                    flowSteps = listOf(
+                        "1. Prerequisite: Intermediate techniques and structured problem solving in $topicName.",
+                        "2. End-to-End Application: Combine multiple concepts into a complete mini-project or case study.",
+                        "3. Optimization & Review: Evaluate efficiency, accuracy, and best practices.",
+                        "4. Mastery Check: Complete the 10-MCQ Assessment in VicharaX to verify retention."
+                    ),
+                    resources = listOf(
+                        LearningResourceLink("MIT OpenCourseWare: $topicName", "https://ocw.mit.edu/search/?q=$encoded"),
+                        LearningResourceLink("GeeksforGeeks: Advanced $topicName", "https://www.geeksforgeeks.org/search/?q=advanced+$encoded")
+                    )
+                )
+            )
+        }
+
         // Default & Python Curriculum (Variables -> Data Types -> Arrays/Lists -> Strings -> Functions)
         return listOf(
             SubjectTopicNode(

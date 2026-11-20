@@ -98,7 +98,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
     val levels = listOf("Beginner", "Intermediate", "Advanced")
     val hourOptions = listOf("1.0", "1.5", "2.0", "3.0")
     val durationOptions = listOf("15 Days", "30 Days", "60 Days", "90 Days")
-    val languages = listOf("English", "Hindi", "Bengali")
+    val languages = StringsManager.supportedLanguages
 
     Column(
         modifier = Modifier
@@ -495,13 +495,21 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
 
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Preferred Mentor Language", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            languages.forEach { lang ->
-                                FilterChip(
-                                    selected = preferredLanguage == lang,
-                                    onClick = { preferredLanguage = lang },
-                                    label = { Text(lang, fontSize = 12.sp) }
-                                )
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            languages.chunked(3).forEach { rowLangs ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    rowLangs.forEach { lang ->
+                                        FilterChip(
+                                            selected = preferredLanguage == lang,
+                                            onClick = { preferredLanguage = lang },
+                                            label = { Text(lang, fontSize = 12.sp, maxLines = 1) },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

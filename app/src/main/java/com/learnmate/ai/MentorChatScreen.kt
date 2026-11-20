@@ -2,29 +2,23 @@
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class ChatMessage(
@@ -39,50 +33,38 @@ fun MentorChatScreen(
     mentorEngine: AiMentorEngine = LocalLlamaEngine
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var input by remember { mutableStateOf("") }
-    var difficulty by remember { mutableStateOf(profile.skillLevel) }
-    var hintOnly by remember { mutableStateOf(true) }
-    var isThinking by remember { mutableStateOf(false) }
-
+    val coroutineScope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
     val gapReport = remember { AppStorage.loadGapReport(context) }
 
-    val welcomeMessage = remember(profile.name, profile.subject, profile.preferredLanguage, gapReport) {
-        val gapNote = if (gapReport != null && gapReport.weakTopics.isNotEmpty()) {
-            " I noticed from your diagnostic that we should reinforce ${gapReport.weakTopics.joinToString(", ")}."
-        } else {
-            ""
-        }
-        ChatMessage(
-            sender = "VicharaX",
-            text = "Namaste ${profile.name}! I'm your offline ${profile.subject} mentor (${profile.preferredLanguage}).$gapNote Ask me any concept or tap a prompt below!"
-        )
-    }
-
+    var inputText by remember { mutableStateOf("") }
+    var isThinking by remember { mutableStateOf(false) }
     var messages by remember {
         val saved = AppStorage.loadChatHistory(context)
-        mutableStateOf(if (saved.isNotEmpty()) saved else listOf(welcomeMessage))
-    }
-
-    val quickPrompts = remember(profile.subject, gapReport) {
-        val weakFocus = gapReport?.weakTopics?.firstOrNull()
-        listOfNotNull(
-            weakFocus?.let { "Help me master $it step-by-step" },
-            "Explain ${profile.subject} basics with an example",
-            "Give me a 15-min practice problem"
+        mutableStateOf(
+            saved.ifEmpty {
+                listOf(ChatMessage("VicharaX", strings.mentorGreeting))
+            }
         )
     }
 
-    fun sendQuestion(questionText: String) {
-        val q = questionText.trim()
+    LaunchedEffect(messages.size, messages.lastOrNull()?.text?.length) {
+        if (messages.isNotEmpty()) {
+            listState.scrollToItem(messages.lastIndex)
+        }
+    }
+
+    fun sendQuestion(rawQuestion: String) {
+        val q = rawQuestion.trim()
         if (q.isEmpty() || isThinking) return
-        input = ""
+
+        ProfileStorage.recordActivityToday(context, profile.name)
         val withUser = messages + ChatMessage("You", q)
         messages = withUser
-        AppStorage.saveChatHistory(context, withUser)
+        inputText = ""
         isThinking = true
 
-val selectedTopic = profile.subject.ifBlank { "Python" }
+        val selectedTopic = profile.subject.ifBlank { "Python" }
         val extraTopics = (gapReport?.weakTopics ?: emptyList()) + (gapReport?.missingPrerequisites ?: emptyList())
         if (!TopicGuardrail.isQuestionAllowed(q, selectedTopic, extraTopics)) {
             val refusalMsg = TopicGuardrail.buildRefusalMessage(selectedTopic)
@@ -93,243 +75,143 @@ val selectedTopic = profile.subject.ifBlank { "Python" }
             return
         }
 
-        // Inject diagnosed weak topics into prompt context automatically
-        val contextualPrompt = if (gapReport != null && gapReport.weakTopics.isNotEmpty()) {
-            "[Student Weak Topics: ${gapReport.weakTopics.joinToString(", ")}; Missing Prerequisites: ${gapReport.missingPrerequisites.joinToString(", ")}] $q"
-        } else {
-            q
-        }
+        val streamingPlaceholder = withUser + ChatMessage("VicharaX", "")
+        messages = streamingPlaceholder
 
-                scope.launch {
-            val baseMessages = messages
-            val finalReply = mentorEngine.askMentorStream(contextualPrompt, profile, difficulty, hintOnly) { partialText ->
-                isThinking = false
-                val cleaned = partialText.replace("**", "").replace("```python", "").replace("```sql", "").replace("```", "")
-                messages = baseMessages + ChatMessage("VicharaX", cleaned)
-            }
+        coroutineScope.launch {
+            val reply = mentorEngine.askMentorStream(
+                question = q,
+                profile = profile,
+                difficulty = profile.skillLevel.ifBlank { "Beginner" },
+                hintOnly = false,
+                onToken = { partialText ->
+                    if (partialText.isNotEmpty()) {
+                        messages = withUser + ChatMessage("VicharaX", partialText)
+                    }
+                }
+            )
+            val updated = withUser + ChatMessage("VicharaX", reply)
+            messages = updated
+            AppStorage.saveChatHistory(context, updated)
             isThinking = false
-            val cleanedFinal = finalReply.replace("**", "").replace("```python", "").replace("```sql", "").replace("```", "")
-            messages = baseMessages + ChatMessage("VicharaX", cleanedFinal)
-            AppStorage.saveChatHistory(context, messages)
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Header & Mode Controls
-        Surface(
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // Minimal single-line topic scope bar with clear chat button (no tutor/level selector box)
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            shadowElevation = 1.dp
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFCCFBF1)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFF0D9488), modifier = Modifier.size(18.dp))
-                        }
-                        Column {
-                            Text("Llama 3.2 On-Device Tutor", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Text(
-                                text = if (gapReport?.weakTopics?.isNotEmpty() == true) {
-                                    "Context: ${gapReport.weakTopics.joinToString(", ")} • ${profile.preferredLanguage}"
-                                } else {
-                                    "Language: ${profile.preferredLanguage} • 100% Local"
-                                },
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    IconButton(
-                        onClick = {
-                            messages = listOf(welcomeMessage)
-                            AppStorage.saveChatHistory(context, messages)
-                        }
-                    ) {
-                        Icon(Icons.Default.DeleteOutline, contentDescription = "Clear Chat", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Text(
+                    text = "Topic Scope: ${profile.subject} • ${profile.preferredLanguage}",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                )
+            }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf("Beginner", "Intermediate").forEach { level ->
-                        FilterChip(
-                            selected = difficulty == level,
-                            onClick = { difficulty = level },
-                            label = { Text(level, fontSize = 12.sp) }
-                        )
-                    }
-                    FilterChip(
-                        selected = hintOnly,
-                        onClick = { hintOnly = !hintOnly },
-                        label = { Text(if (hintOnly) strings.socraticHints else strings.fullSolution, fontSize = 12.sp) }
-                    )
-                }
+            IconButton(
+                onClick = {
+                    val reset = listOf(ChatMessage("VicharaX", strings.mentorGreeting))
+                    messages = reset
+                    AppStorage.saveChatHistory(context, reset)
+                },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = "Clear Chat",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Chat Feed
+        // Clean Direct Q&A Message List
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(vertical = 4.dp)
         ) {
             items(messages) { msg ->
                 val isUser = msg.sender == "You"
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
-                    verticalAlignment = Alignment.Top
+                    horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
                 ) {
-                    if (!isUser) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF0D9488)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-
                     Surface(
-                        modifier = Modifier.widthIn(max = 275.dp),
                         shape = RoundedCornerShape(
-                            topStart = if (isUser) 18.dp else 4.dp,
-                            topEnd = if (isUser) 4.dp else 18.dp,
-                            bottomStart = 18.dp,
-                            bottomEnd = 18.dp
+                            topStart = 18.dp,
+                            topEnd = 18.dp,
+                            bottomStart = if (isUser) 18.dp else 4.dp,
+                            bottomEnd = if (isUser) 4.dp else 18.dp
                         ),
-                        color = if (isUser) Color(0xFF1D4ED8) else MaterialTheme.colorScheme.surface,
+                        color = if (isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
                         border = if (isUser) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        shadowElevation = 1.dp
+                        shadowElevation = 1.dp,
+                        modifier = Modifier.widthIn(max = 310.dp)
                     ) {
-                        Column(modifier = Modifier.padding(13.dp)) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
                             Text(
-                                text = if (isUser) "You" else "VicharaX • Offline",
-                                fontWeight = FontWeight.Bold,
+                                text = msg.sender,
                                 fontSize = 10.sp,
-                                color = if (isUser) Color(0xFFBAE6FD) else Color(0xFF0D9488)
+                                fontWeight = FontWeight.Bold,
+                                color = if (isUser) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.secondary
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = msg.text,
+                                text = msg.text.ifEmpty { "..." },
                                 fontSize = 14.sp,
                                 lineHeight = 20.sp,
                                 color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
-
-                    if (isUser) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFDBEAFE)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF1D4ED8), modifier = Modifier.size(16.dp))
-                        }
-                    }
                 }
             }
         }
 
-        if (isThinking) {
-         Surface(
-             shape = RoundedCornerShape(12.dp),
-             color = MaterialTheme.colorScheme.secondaryContainer,
-             modifier = Modifier.padding(vertical = 4.dp)
-         ) {
-             Row(
-                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                 verticalAlignment = Alignment.CenterVertically,
-                 horizontalArrangement = Arrangement.spacedBy(8.dp)
-             ) {
-                 CircularProgressIndicator(
-                     modifier = Modifier.size(14.dp),
-                     strokeWidth = 2.dp,
-                     color = MaterialTheme.colorScheme.secondary
-                 )
-                 Text(
-                     text = "Generating offline response on Arm CPU...",
-                     fontSize = 12.sp,
-                     color = MaterialTheme.colorScheme.onSecondaryContainer
-                 )
-             }
-         }
-     }
-
-        // Quick Prompt Suggestions
+        // Input Row
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(vertical = 6.dp),
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            quickPrompts.forEach { prompt ->
-                SuggestionChip(
-                    onClick = { sendQuestion(prompt) },
-                    label = { Text(prompt, fontSize = 12.sp) },
-                    shape = RoundedCornerShape(20.dp)
-                )
-            }
-        }
+            OutlinedTextField(
+                value = inputText,
+                onValueChange = { inputText = it },
+                placeholder = { Text(strings.askPlaceholder, fontSize = 14.sp) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(16.dp),
+                singleLine = false,
+                maxLines = 3
+            )
 
-        // Elevated Input Dock
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            shadowElevation = 2.dp
-        ) {
-            Row(
-                modifier = Modifier.padding(start = 16.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+            FilledIconButton(
+                onClick = { sendQuestion(inputText) },
+                enabled = inputText.isNotBlank() && !isThinking,
+                modifier = Modifier.size(50.dp),
+                shape = RoundedCornerShape(14.dp)
             ) {
-                TextField(
-                    value = input,
-                    onValueChange = { input = it },
-                    placeholder = { Text(strings.askPlaceholder, fontSize = 14.sp) },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send"
                 )
-                FilledIconButton(
-                    onClick = { sendQuestion(input) },
-                    modifier = Modifier.size(42.dp),
-                    shape = CircleShape
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", modifier = Modifier.size(18.dp))
-                }
             }
         }
     }

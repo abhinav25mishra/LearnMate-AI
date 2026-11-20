@@ -12,9 +12,11 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,14 +38,18 @@ fun RoadmapScreen(
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
-    val subjectTopics = remember(profile.subject) {
-        LearningEngine.getSubjectTopics(profile.subject)
+
+    var activeRoadmapSubject by remember(profile.subject) { mutableStateOf(profile.subject) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val subjectTopics = remember(activeRoadmapSubject) {
+        LearningEngine.getSubjectTopics(activeRoadmapSubject)
     }
-    var expandedTopicId by remember(profile.subject) {
+    var expandedTopicId by remember(activeRoadmapSubject) {
         mutableStateOf(subjectTopics.firstOrNull()?.id)
     }
-    var exploredTopicIds by remember(profile.subject, profile.name) {
-        mutableStateOf(ProfileStorage.getExploredTopics(context, profile.name, profile.subject))
+    var exploredTopicIds by remember(activeRoadmapSubject, profile.name) {
+        mutableStateOf(ProfileStorage.getExploredTopics(context, profile.name, activeRoadmapSubject))
     }
 
     val masteryPct = if (subjectTopics.isEmpty()) 0 else (exploredTopicIds.size * 100) / subjectTopics.size
@@ -52,9 +58,9 @@ fun RoadmapScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Subject-Driven Roadmap Hero Banner
+        // Compact Roadmap Header Card with Percentage Directly Below Title
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -62,44 +68,35 @@ fun RoadmapScreen(
                     brush = Brush.linearGradient(
                         colors = listOf(Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF0D9488))
                     ),
-                    shape = RoundedCornerShape(22.dp)
+                    shape = RoundedCornerShape(18.dp)
                 )
-                .padding(20.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Default.AccountTree, contentDescription = null, tint = Color(0xFF5EEAD4))
-                        Text(
-                            text = "${profile.subject} Roadmap",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
-                        )
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color.White.copy(alpha = 0.16f)
-                    ) {
-                        Text(
-                            text = "$masteryPct% Explored",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF5EEAD4),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.AccountTree,
+                        contentDescription = null,
+                        tint = Color(0xFF5EEAD4),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = activeRoadmapSubject,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White
+                    )
                 }
 
+                // Subtle percentage indicator placed directly underneath the topic title
                 Text(
-                    text = "Tap any core ${profile.subject} topic below to open its step-by-step learning flow chart from foundational prerequisites to mastery, along with curated study links.",
-                    fontSize = 13.sp,
-                    lineHeight = 19.sp,
-                    color = Color(0xFFE0F2FE)
+                    text = "$masteryPct% explored • ${exploredTopicIds.size}/${subjectTopics.size} core topics",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF99F6E4)
                 )
 
                 LinearProgressIndicator(
@@ -108,13 +105,47 @@ fun RoadmapScreen(
                     trackColor = Color.White.copy(alpha = 0.25f),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(6.dp)
+                        .height(5.dp)
                         .clip(RoundedCornerShape(4.dp))
                 )
             }
         }
 
-        // Core Subject Topic Cards with Interactive Flowchart & Learning Links
+        // Dynamic Topic Search Bar (Generates matching roadmap & links for any searched topic)
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text("Search any topic (e.g., SQL, Python, C, Trees)...", fontSize = 13.sp) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            trailingIcon = {
+                if (searchQuery.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(
+                            onClick = {
+                                activeRoadmapSubject = searchQuery.trim()
+                                ProfileStorage.recordActivityToday(context, profile.name)
+                            }
+                        ) {
+                            Text("Load", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                        IconButton(
+                            onClick = {
+                                searchQuery = ""
+                                activeRoadmapSubject = profile.subject
+                            },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Reset", modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp)
+        )
+
+        // Core Subject Topic Cards with Interactive Flow Chart & Relevant Learning Links
         subjectTopics.forEach { topic ->
             val isExpanded = expandedTopicId == topic.id
             val isExplored = exploredTopicIds.contains(topic.id)
@@ -122,21 +153,21 @@ fun RoadmapScreen(
             Surface(
                 onClick = {
                     expandedTopicId = if (isExpanded) null else topic.id
-                    ProfileStorage.markTopicExplored(context, profile.name, profile.subject, topic.id)
-                    exploredTopicIds = ProfileStorage.getExploredTopics(context, profile.name, profile.subject)
+                    ProfileStorage.markTopicExplored(context, profile.name, activeRoadmapSubject, topic.id)
+                    exploredTopicIds = ProfileStorage.getExploredTopics(context, profile.name, activeRoadmapSubject)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.surface,
                 border = BorderStroke(
                     width = if (isExpanded) 1.5.dp else 1.dp,
                     color = if (isExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
                 ),
-                shadowElevation = if (isExpanded) 3.dp else 1.dp
+                shadowElevation = if (isExpanded) 2.dp else 1.dp
             ) {
                 Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -150,7 +181,7 @@ fun RoadmapScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(34.dp)
                                     .clip(CircleShape)
                                     .background(
                                         if (isExplored) MaterialTheme.colorScheme.secondary
@@ -160,7 +191,7 @@ fun RoadmapScreen(
                             ) {
                                 Text(
                                     text = "${topic.order}",
-                                    fontSize = 14.sp,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = if (isExplored) Color.White else MaterialTheme.colorScheme.onPrimaryContainer
                                 )
@@ -169,14 +200,14 @@ fun RoadmapScreen(
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(
                                     text = topic.title,
-                                    fontSize = 16.sp,
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = topic.summary,
                                     fontSize = 12.sp,
-                                    lineHeight = 17.sp,
+                                    lineHeight = 16.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -194,20 +225,20 @@ fun RoadmapScreen(
 
                         Text(
                             text = "Step-by-Step Learning Flow Chart (From Scratch → Mastery)",
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.primary
                         )
 
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             topic.flowSteps.forEachIndexed { stepIdx, stepText ->
                                 Surface(
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = RoundedCornerShape(10.dp),
                                     color = MaterialTheme.colorScheme.surfaceVariant
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(12.dp),
+                                        modifier = Modifier.padding(10.dp),
                                         verticalAlignment = Alignment.Top,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
@@ -215,12 +246,12 @@ fun RoadmapScreen(
                                             imageVector = Icons.Default.CheckCircle,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.secondary,
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(15.dp)
                                         )
                                         Text(
                                             text = stepText,
-                                            fontSize = 13.sp,
-                                            lineHeight = 18.sp,
+                                            fontSize = 12.sp,
+                                            lineHeight = 17.sp,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
@@ -235,7 +266,7 @@ fun RoadmapScreen(
                                             imageVector = Icons.Default.ArrowDownward,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(15.dp)
                                         )
                                     }
                                 }
@@ -244,12 +275,12 @@ fun RoadmapScreen(
 
                         if (topic.resources.isNotEmpty()) {
                             Text(
-                                text = "Recommended Learning Links",
-                                fontSize = 13.sp,
+                                text = "Reference & Learning Links",
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 topic.resources.forEach { link ->
                                     OutlinedButton(
                                         onClick = {
@@ -259,9 +290,9 @@ fun RoadmapScreen(
                                             }
                                         },
                                         modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(12.dp)
+                                        shape = RoundedCornerShape(10.dp)
                                     ) {
-                                        Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(15.dp))
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = link.label,
@@ -269,7 +300,7 @@ fun RoadmapScreen(
                                             fontWeight = FontWeight.SemiBold,
                                             modifier = Modifier.weight(1f)
                                         )
-                                        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(15.dp))
+                                        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp))
                                     }
                                 }
                             }
