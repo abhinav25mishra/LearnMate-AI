@@ -2,7 +2,9 @@
 
 import android.util.Log
 import java.io.File
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.pytorch.executorch.extension.llm.LlmCallback
@@ -13,14 +15,19 @@ object LocalLlamaEngine : AiMentorEngine {
     private var llmModule: LlmModule? = null
     private var loadedModelPath: String? = null
     private var isLoading = false
+    private val mainScope = CoroutineScope(Dispatchers.Main)
 
     private fun resolveModelFiles(): Pair<File?, File?> {
         val pteCandidates = listOf(
-            File("/data/local/tmp/llama/Llama-3.2-1B-Instruct.pte"), File("/data/local/tmp/llama/llama3_2_1b_int4.pte"),
+            File("/data/local/tmp/llama/Llama-3.2-1B-Instruct.pte"),
+            File("/data/local/tmp/llama/llama3_2_1b_int4.pte"),
+            File("/sdcard/Android/data/com.learnmate.ai/files/llama/Llama-3.2-1B-Instruct.pte"),
             File("/sdcard/Android/data/com.learnmate.ai/files/llama/llama3_2_1b_int4.pte")
         )
         val tokCandidates = listOf(
-            File("/data/local/tmp/llama/tokenizer.bin"), File("/data/local/tmp/llama/tokenizer.json"),
+            File("/data/local/tmp/llama/tokenizer.bin"),
+            File("/data/local/tmp/llama/tokenizer.json"),
+            File("/sdcard/Android/data/com.learnmate.ai/files/llama/tokenizer.bin"),
             File("/sdcard/Android/data/com.learnmate.ai/files/llama/tokenizer.json"),
             File("/data/local/tmp/llama/tokenizer.model"),
             File("/sdcard/Android/data/com.learnmate.ai/files/llama/tokenizer.model")
@@ -69,14 +76,16 @@ object LocalLlamaEngine : AiMentorEngine {
 
     private fun buildCompactPrompt(
         question: String,
-        profile: StudentProfile,
+        selectedTopic: String,
+        preferredLanguage: String,
         difficulty: String,
         hintOnly: Boolean
     ): String {
         val cleanQuestion = question.substringAfter("]").trim().ifEmpty { question.trim() }
-        val modeNote = if (hintOnly) "Give a concise hint first." else "Give a clear, complete step-by-step explanation with an example."
+        val modeNote = if (hintOnly) "Give a concise hint." else "Answer clearly and completely with an example."
         return "<|start_header_id|>system<|end_header_id|>\n\n" +
-            "You are LearnMate AI, a ${profile.subject} tutor ($difficulty, ${profile.preferredLanguage}). $modeNote<|eot_id|>" +
+            "You are LearnMate AI, a strict $selectedTopic tutor ($difficulty, $preferredLanguage). " +
+            "Only answer questions about $selectedTopic. If unrelated to $selectedTopic, refuse immediately. $modeNote<|eot_id|>" +
             "<|start_header_id|>user<|end_header_id|>\n\n" +
             "$cleanQuestion<|eot_id|>" +
             "<|start_header_id|>assistant<|end_header_id|>\n\n"
@@ -96,6 +105,15 @@ object LocalLlamaEngine : AiMentorEngine {
         hintOnly: Boolean,
         onToken: (String) -> Unit
     ): String = withContext(Dispatchers.IO) {
+        val selectedTopic = profile.subject.ifBlank { "Python" }
+
+        // STRICT TOPIC BOUNDARY GUARDRAIL: Block out-of-scope prompts BEFORE running LlmModule.generate()
+        if (!TopicGuardrail.isQuestionAllowed(question, selectedTopic)) {
+            val refusal = TopicGuardrail.buildRefusalMessage(selectedTopic)
+            withContext(Dispatchers.Main) { onToken(refusal) }
+            return@withContext refusal
+        }
+
         val (pteFile, tokFile) = resolveModelFiles()
 
         if (pteFile != null && tokFile != null) {
@@ -103,7 +121,15 @@ object LocalLlamaEngine : AiMentorEngine {
             val module = ensureLoaded(pteFile, tokFile)
             if (module != null) {
                 try {
-                    val formattedPrompt = buildCompactPrompt(question, profile, difficulty, hintOnly)
+                    try { module.resetContext() } catch (_: Throwable) {}
+
+                    val formattedPrompt = buildCompactPrompt(
+                        question = question,
+                        selectedTopic = selectedTopic,
+                        preferredLanguage = profile.preferredLanguage,
+                        difficulty = difficulty,
+                        hintOnly = hintOnly
+                    )
                     val responseBuilder = StringBuilder()
                     val startGenNano = System.nanoTime()
                     var firstTokenNano = 0L
@@ -118,7 +144,7 @@ object LocalLlamaEngine : AiMentorEngine {
                             val cleanSoFar = responseBuilder.toString()
                                 .replace("<|eot_id|>", "")
                                 .replace("<|end_of_text|>", "")
-                            onToken(cleanSoFar)
+                            mainScope.launch { onToken(cleanSoFar) }
                         }
 
                         override fun onStats(stats: String) {
@@ -140,7 +166,6 @@ object LocalLlamaEngine : AiMentorEngine {
                         }
                     }
 
-                    // 384 tokens ensures full explanations & code blocks finish without cutting off mid-sentence
                     module.generate(formattedPrompt, 384, callback, false)
 
                     val endGenNano = System.nanoTime()
@@ -159,7 +184,7 @@ object LocalLlamaEngine : AiMentorEngine {
                             tokensPerSec = "%.1f".format(measuredTps),
                             inferenceStatus = "ExecuTorch Active (Arm64)"
                         )
-                        onToken(finalResponse)
+                        withContext(Dispatchers.Main) { onToken(finalResponse) }
                         return@withContext finalResponse
                     }
                 } catch (t: Throwable) {
@@ -177,7 +202,7 @@ object LocalLlamaEngine : AiMentorEngine {
         }
 
         val fallback = generateDynamicResponse(question, profile, difficulty, hintOnly)
-        onToken(fallback)
+        withContext(Dispatchers.Main) { onToken(fallback) }
         return@withContext fallback
     }
 
@@ -187,6 +212,11 @@ object LocalLlamaEngine : AiMentorEngine {
         difficulty: String,
         hintOnly: Boolean
     ): String {
+        val selectedTopic = profile.subject.ifBlank { "Python" }
+        if (!TopicGuardrail.isQuestionAllowed(rawQuestion, selectedTopic)) {
+            return TopicGuardrail.buildRefusalMessage(selectedTopic)
+        }
+
         val q = rawQuestion.substringAfter("]").trim().ifEmpty { rawQuestion.trim() }
         val qLower = q.lowercase()
         val lang = profile.preferredLanguage
@@ -231,7 +261,7 @@ object LocalLlamaEngine : AiMentorEngine {
                 "2. Break it into Fundamentals → Worked Example → Edge Cases."
         } else {
             "Step-by-Step Guide: $topicTitle ($difficulty • $lang)\n\n" +
-                "1. Core Foundation:\nUnderstand the primary components, rules, and real-world purpose of $topicTitle in ${profile.subject}.\n\n" +
+                "1. Core Foundation:\nUnderstand the primary components, rules, and real-world purpose of $topicTitle in $selectedTopic.\n\n" +
                 "2. Practical Walkthrough:\n• Define the key concepts clearly.\n• Trace a small concrete example step by step.\n• Verify edge cases and performance.\n\n" +
                 "3. Applied Context (${profile.interests}):\nApply $topicTitle to a small hands-on mini-project related to ${profile.interests}."
         }

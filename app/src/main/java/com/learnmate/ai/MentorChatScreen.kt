@@ -82,6 +82,17 @@ fun MentorChatScreen(
         AppStorage.saveChatHistory(context, withUser)
         isThinking = true
 
+val selectedTopic = profile.subject.ifBlank { "Python" }
+        val extraTopics = (gapReport?.weakTopics ?: emptyList()) + (gapReport?.missingPrerequisites ?: emptyList())
+        if (!TopicGuardrail.isQuestionAllowed(q, selectedTopic, extraTopics)) {
+            val refusalMsg = TopicGuardrail.buildRefusalMessage(selectedTopic)
+            val updated = withUser + ChatMessage("LearnMate AI", refusalMsg)
+            messages = updated
+            AppStorage.saveChatHistory(context, updated)
+            isThinking = false
+            return
+        }
+
         // Inject diagnosed weak topics into prompt context automatically
         val contextualPrompt = if (gapReport != null && gapReport.weakTopics.isNotEmpty()) {
             "[Student Weak Topics: ${gapReport.weakTopics.joinToString(", ")}; Missing Prerequisites: ${gapReport.missingPrerequisites.joinToString(", ")}] $q"
