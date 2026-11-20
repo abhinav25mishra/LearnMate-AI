@@ -3,6 +3,12 @@
 object TopicGuardrail {
 
     private val domainKeywords: Map<String, Set<String>> = mapOf(
+"c programming" to setOf(
+            "c", "c programming", "printf", "scanf", "pointer", "pointers", "malloc", "calloc",
+            "free", "struct", "union", "typedef", "header", "stdio", "stdlib", "string.h",
+            "array", "loop", "for", "while", "do while", "switch", "function", "recursion",
+            "variable", "int", "float", "char", "double", "void", "sizeof", "compile", "gcc"
+        ),
         "python" to setOf(
             "python", "py", "pip", "def", "class", "list", "tuple", "dict", "dictionary",
             "set", "loop", "for", "while", "if", "else", "elif", "function", "lambda",

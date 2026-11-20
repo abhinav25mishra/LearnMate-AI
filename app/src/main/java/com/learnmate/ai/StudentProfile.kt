@@ -1,6 +1,9 @@
 ﻿package com.learnmate.ai
 
 import android.content.Context
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -31,6 +34,8 @@ object ProfileStorage {
     private const val KEY_ACTIVE_USER = "active_signed_in_user"
     private const val KEY_VISIT_PREFIX = "visit_count_"
     private const val KEY_SCORES_PREFIX = "assessment_scores_"
+    private const val KEY_ACTIVE_DATES_PREFIX = "active_dates_"
+    private const val KEY_EXPLORED_TOPICS_PREFIX = "explored_topics_"
 
     fun saveProfile(context: Context, profile: StudentProfile) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -63,6 +68,8 @@ object ProfileStorage {
             .putString(KEY_ACCOUNTS, arr.toString())
             .putString(KEY_ACTIVE_USER, normalized.name)
             .apply()
+
+        recordActivityToday(context, normalized.name)
     }
 
     fun loadAllAccounts(context: Context): List<StudentProfile> {
@@ -100,14 +107,19 @@ object ProfileStorage {
         return loadAllAccounts(context).firstOrNull { it.name.equals(activeName, ignoreCase = true) }
     }
 
-    fun signIn(context: Context, name: String, passcode: String): StudentProfile? {
-        val account = loadAllAccounts(context).firstOrNull {
+    fun verifyCredentials(context: Context, name: String, passcode: String): StudentProfile? {
+        return loadAllAccounts(context).firstOrNull {
             it.name.equals(name.trim(), ignoreCase = true) && it.passcode == passcode.trim()
-        } ?: return null
+        }
+    }
+
+    fun signIn(context: Context, name: String, passcode: String): StudentProfile? {
+        val account = verifyCredentials(context, name, passcode) ?: return null
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_ACTIVE_USER, account.name)
             .apply()
+        recordActivityToday(context, account.name)
         return account
     }
 
@@ -127,12 +139,63 @@ object ProfileStorage {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val next = prefs.getInt(key, 0) + 1
         prefs.edit().putInt(key, next).apply()
+        recordActivityToday(context, userName)
         return next
     }
 
     fun getVisitCount(context: Context, userName: String): Int {
         val key = KEY_VISIT_PREFIX + userName.trim().lowercase()
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(key, 1)
+    }
+
+    // Strictly automatic, activity-driven active-day persistence (cannot be manually toggled)
+    fun recordActivityToday(context: Context, userName: String) {
+        if (userName.isBlank()) return
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val userKey = userName.trim().lowercase()
+        val todayIso = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val existingDates = prefs.getStringSet(KEY_ACTIVE_DATES_PREFIX + userKey, emptySet())?.toMutableSet() ?: mutableSetOf()
+        if (existingDates.add(todayIso)) {
+            prefs.edit().putStringSet(KEY_ACTIVE_DATES_PREFIX + userKey, existingDates).apply()
+        }
+    }
+
+    fun getActiveDateStrings(context: Context, userName: String): Set<String> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getStringSet(KEY_ACTIVE_DATES_PREFIX + userName.trim().lowercase(), emptySet()) ?: emptySet()
+    }
+
+    fun getActiveWeekDayIndices(context: Context, userName: String): Set<Int> {
+        val dates = getActiveDateStrings(context, userName)
+        val parser = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val dayFmt = SimpleDateFormat("u", Locale.US) // 1 = Monday .. 7 = Sunday
+        val indices = mutableSetOf<Int>()
+        dates.forEach { dateStr ->
+            try {
+                val parsed = parser.parse(dateStr)
+                if (parsed != null) {
+                    val isoDay = dayFmt.format(parsed).toIntOrNull() ?: 1
+                    indices.add((isoDay - 1).coerceIn(0, 6))
+                }
+            } catch (_: Exception) {
+            }
+        }
+        return indices
+    }
+
+    fun markTopicExplored(context: Context, userName: String, subject: String, topicId: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val key = "${KEY_EXPLORED_TOPICS_PREFIX}${userName.trim().lowercase()}_${subject.trim().lowercase()}"
+        val current = prefs.getStringSet(key, emptySet())?.toMutableSet() ?: mutableSetOf()
+        current.add(topicId)
+        prefs.edit().putStringSet(key, current).apply()
+        recordActivityToday(context, userName)
+    }
+
+    fun getExploredTopics(context: Context, userName: String, subject: String): Set<String> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val key = "${KEY_EXPLORED_TOPICS_PREFIX}${userName.trim().lowercase()}_${subject.trim().lowercase()}"
+        return prefs.getStringSet(key, emptySet()) ?: emptySet()
     }
 
     fun saveAssessmentScore(context: Context, userName: String, record: AssessmentRecord) {
@@ -151,6 +214,7 @@ object ProfileStorage {
             })
         }
         prefs.edit().putString(key, arr.toString()).apply()
+        recordActivityToday(context, userName)
     }
 
     fun loadAssessmentScores(context: Context, userName: String): List<AssessmentRecord> {

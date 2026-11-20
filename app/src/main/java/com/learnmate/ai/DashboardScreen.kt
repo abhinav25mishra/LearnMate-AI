@@ -12,16 +12,13 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -37,24 +34,30 @@ fun DashboardScreen(
     onSignOut: () -> Unit
 ) {
     val context = LocalContext.current
-    val roadmap = remember { AppStorage.loadRoadmap(context) }
-    val gapReport = remember { AppStorage.loadGapReport(context) }
+    val subjectTopics = remember(profile.subject) { LearningEngine.getSubjectTopics(profile.subject) }
+    val exploredTopics = remember(profile.name, profile.subject) { ProfileStorage.getExploredTopics(context, profile.name, profile.subject) }
     val assessmentHistory = remember(profile.name) { ProfileStorage.loadAssessmentScores(context, profile.name) }
+    val activeDates = remember(profile.name) { ProfileStorage.getActiveDateStrings(context, profile.name) }
     var showPasscode by remember { mutableStateOf(false) }
 
-    val completedModules = roadmap.count { it.isCompleted }
-    val masteryPct = if (roadmap.isEmpty()) 0 else (completedModules * 100) / roadmap.size
-    val latestScoreText = assessmentHistory.firstOrNull()?.let { "${it.score}/${it.total}" } ?: "Not Taken"
+    val masteryPct = if (subjectTopics.isEmpty()) 0 else (exploredTopics.size * 100) / subjectTopics.size
+    val latestScoreText = assessmentHistory.firstOrNull()?.let { "${it.score}/${it.total}" } ?: "0/10"
 
-    val availableTopics = listOf("Python", "Data Structures & Algorithms", "SQL & Databases", "Machine Learning & AI", "Mathematics")
+    val availableTopics = listOf(
+        "Python",
+        "C Programming",
+        "Data Structures & Algorithms",
+        "SQL & Databases",
+        "Machine Learning & AI",
+        "Mathematics"
+    )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        // Profile & Identity Header Card
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -64,16 +67,16 @@ fun DashboardScreen(
                     ),
                     shape = RoundedCornerShape(22.dp)
                 )
-                .padding(20.dp)
+                .padding(22.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Box(contentAlignment = Alignment.BottomEnd) {
                     Surface(
-                        modifier = Modifier.size(64.dp),
+                        modifier = Modifier.size(66.dp),
                         shape = CircleShape,
                         color = Color(0xFFDBEAFE),
                         border = BorderStroke(2.dp, Color(0xFF5EEAD4))
@@ -93,7 +96,7 @@ fun DashboardScreen(
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         text = profile.name,
-                        fontSize = 21.sp,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color.White
                     )
@@ -107,7 +110,7 @@ fun DashboardScreen(
                         color = Color.White.copy(alpha = 0.16f)
                     ) {
                         Text(
-                            text = "Active Topic: ${profile.subject} • ${gapReport?.assignedLevel ?: profile.skillLevel}",
+                            text = "Subject: ${profile.subject} • ${profile.skillLevel}",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
@@ -118,50 +121,29 @@ fun DashboardScreen(
             }
         }
 
-        // 3-Metric Telemetry Strip (App Visits, Latest Assessment Score, Roadmap Mastery)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            DashboardStatCard(
-                title = "App Visits",
-                value = "$visitCount",
-                subtitle = "Sessions",
-                modifier = Modifier.weight(1f)
-            )
-            DashboardStatCard(
-                title = "Assessment",
-                value = latestScoreText,
-                subtitle = "${assessmentHistory.size} attempts",
-                modifier = Modifier.weight(1f)
-            )
-            DashboardStatCard(
-                title = "Mastery",
-                value = "$masteryPct%",
-                subtitle = "$completedModules/${roadmap.size} modules",
-                modifier = Modifier.weight(1f)
-            )
+            DashboardStatCard(title = "Visits", value = "$visitCount", modifier = Modifier.weight(1f))
+            DashboardStatCard(title = "Active Days", value = "${activeDates.size.coerceAtLeast(1)}", modifier = Modifier.weight(1f))
+            DashboardStatCard(title = "Assessment", value = latestScoreText, modifier = Modifier.weight(1f))
+            DashboardStatCard(title = "Progress", value = "$masteryPct%", modifier = Modifier.weight(1f))
         }
 
-        // Active AI Mentor Topic Selector (Directly controls TopicGuardrail)
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             shadowElevation = 1.dp
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.School, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text("Active Learning Topic (Mentor Scope)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("Active Subject (Roadmap & Mentor Scope)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
-                Text(
-                    text = "VicharaX enforces a strict topic barrier in AI Mentor based on your selected topic:",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     availableTopics.chunked(2).forEach { rowTopics ->
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             rowTopics.forEach { topic ->
@@ -178,27 +160,27 @@ fun DashboardScreen(
             }
         }
 
-        // Saved Account Details & Passcode Card
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             shadowElevation = 1.dp
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.AccountCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text("Saved Sign-Up Details & Credentials", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("Sign-Up Details & Security", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                DashInfoRow("Account Name", profile.name)
+                DashInfoRow("Learner Name", profile.name)
                 DashInfoRow("Selected Interests", profile.interests)
                 DashInfoRow("Learning Goal", profile.goal)
-                DashInfoRow("Study Commitment", "${profile.dailyHours} hrs/day • ${profile.targetDate}")
-                DashInfoRow("Preferred Language", profile.preferredLanguage)
-                DashInfoRow("Total App Opens", "$visitCount times")
+                DashInfoRow("Study Schedule", "${profile.dailyHours} hrs/day • ${profile.targetDate}")
+                DashInfoRow("Language", profile.preferredLanguage)
+                DashInfoRow("Total App Opens", "$visitCount")
+                DashInfoRow("Recorded Active Days", "${activeDates.size.coerceAtLeast(1)} day(s)")
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -227,15 +209,14 @@ fun DashboardScreen(
             }
         }
 
-        // Assessment Score History Card
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             shadowElevation = 1.dp
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                     Text("Assessment Score History", fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -244,7 +225,7 @@ fun DashboardScreen(
 
                 if (assessmentHistory.isEmpty()) {
                     Text(
-                        text = "No assessments submitted yet. Open the Assessment tab to take your 10-MCQ diagnostic test.",
+                        text = "No assessments submitted yet. Open the Assessment tab to take the 10-MCQ quiz.",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -277,12 +258,11 @@ fun DashboardScreen(
             }
         }
 
-        // Sign Out / Switch Account Button
         OutlinedButton(
             onClick = onSignOut,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
+                .height(52.dp),
             shape = RoundedCornerShape(14.dp),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
         ) {
@@ -294,7 +274,7 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun DashboardStatCard(title: String, value: String, subtitle: String, modifier: Modifier = Modifier) {
+private fun DashboardStatCard(title: String, value: String, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
@@ -303,13 +283,12 @@ private fun DashboardStatCard(title: String, value: String, subtitle: String, mo
         shadowElevation = 1.dp
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(vertical = 14.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(title, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium)
-            Text(value, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
-            Text(subtitle, fontSize = 10.sp, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.SemiBold)
+            Text(value, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+            Text(title, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
         }
     }
 }

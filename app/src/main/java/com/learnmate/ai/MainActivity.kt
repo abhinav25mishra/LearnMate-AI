@@ -19,14 +19,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.OfflineBolt
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
@@ -106,7 +104,6 @@ fun VicharaXApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
     var showDashboardScreen by remember { mutableStateOf(false) }
     var visitCount by remember { mutableStateOf(1) }
 
-    // Track app opens/visits once per session for the active signed-in user
     LaunchedEffect(profile?.name) {
         profile?.let { active ->
             visitCount = ProfileStorage.incrementAndGetVisitCount(context, active.name)
@@ -155,57 +152,34 @@ fun VicharaXApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
-                            } else {
-                                // Compact Top-Left Dashboard / Profile Trigger Badge
-                                Surface(
-                                    onClick = {
-                                        showPerfScreen = false
-                                        showDashboardScreen = true
-                                    },
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
-                                    modifier = Modifier.padding(start = 10.dp, end = 6.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Dashboard,
-                                            contentDescription = "Open Dashboard",
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Text(
-                                            text = currentProfile.name.take(1).uppercase(),
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    }
-                                }
                             }
                         },
                         title = {
+                            // VicharaX icon itself is the clickable Dashboard trigger (no extra side box)
                             Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        showPerfScreen = false
+                                        showDashboardScreen = true
+                                    }
+                                    .padding(vertical = 4.dp, horizontal = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                VxBrandMark(sizeDp = 30)
+                                VxBrandMark(sizeDp = 34)
                                 Column {
                                     Text(
                                         text = "VicharaX",
                                         fontWeight = FontWeight.ExtraBold,
-                                        fontSize = 17.sp,
+                                        fontSize = 18.sp,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         text = when {
                                             showDashboardScreen -> "Learner Dashboard"
                                             showPerfScreen -> "Arm & ExecuTorch Metrics"
-                                            else -> "Topic: ${currentProfile.subject}"
+                                            else -> "${currentProfile.subject} • Tap icon for Profile"
                                         },
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Medium,
@@ -244,7 +218,7 @@ fun VicharaXApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                                 shape = RoundedCornerShape(20.dp),
                                 color = MaterialTheme.colorScheme.secondaryContainer,
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)),
-                                modifier = Modifier.padding(end = 10.dp)
+                                modifier = Modifier.padding(end = 12.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
@@ -305,7 +279,7 @@ fun VicharaXApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
                 when {
                     showDashboardScreen -> {
@@ -339,8 +313,7 @@ fun VicharaXApp(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                                     profile = currentProfile,
                                     visitCount = visitCount,
                                     strings = strings,
-                                    onNavigate = { target -> selectedTab = target },
-                                    onOpenDashboard = { showDashboardScreen = true }
+                                    onOpenRoadmap = { selectedTab = 2 }
                                 )
                                 1 -> AssessmentScreen(
                                     profile = currentProfile,
@@ -367,18 +340,24 @@ fun HomeDashboardTab(
     profile: StudentProfile,
     visitCount: Int,
     strings: UiStrings,
-    onNavigate: (Int) -> Unit,
-    onOpenDashboard: () -> Unit
+    onOpenRoadmap: () -> Unit
 ) {
     val context = LocalContext.current
-    val savedRoadmap = remember { AppStorage.loadRoadmap(context) }
-    val savedGapReport = remember { AppStorage.loadGapReport(context) }
-    val completedModules = savedRoadmap.count { it.isCompleted }
-    val completionPct = if (savedRoadmap.isEmpty()) 0 else (completedModules * 100) / savedRoadmap.size
+    val subjectTopics = remember(profile.subject) { LearningEngine.getSubjectTopics(profile.subject) }
+    val exploredTopics = remember(profile.name, profile.subject) {
+        ProfileStorage.getExploredTopics(context, profile.name, profile.subject)
+    }
+    val completionPct = if (subjectTopics.isEmpty()) 0 else (exploredTopics.size * 100) / subjectTopics.size
     var dailyGoalChecked by remember { mutableStateOf(false) }
 
+    // Strictly activity-driven weekly active days (read-only; cannot be manually toggled)
     val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-    var activeDays by remember { mutableStateOf(setOf(0, 1)) }
+    val activeDays = remember(profile.name, visitCount) {
+        ProfileStorage.getActiveWeekDayIndices(context, profile.name)
+    }
+    val totalRecordedActiveDays = remember(profile.name, visitCount) {
+        ProfileStorage.getActiveDateStrings(context, profile.name).size.coerceAtLeast(1)
+    }
 
     var secondsLeft by remember { mutableStateOf(25 * 60) }
     var isTimerRunning by remember { mutableStateOf(false) }
@@ -397,9 +376,9 @@ fun HomeDashboardTab(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Hero Banner
+        // Spacious Welcome Hero Card
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -407,22 +386,22 @@ fun HomeDashboardTab(
                     brush = Brush.linearGradient(
                         colors = listOf(Color(0xFF0F172A), Color(0xFF1D4ED8), Color(0xFF0D9488))
                     ),
-                    shape = RoundedCornerShape(22.dp)
+                    shape = RoundedCornerShape(24.dp)
                 )
-                .padding(20.dp)
+                .padding(22.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = Color.White.copy(alpha = 0.16f)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
@@ -433,7 +412,7 @@ fun HomeDashboardTab(
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
-                                text = "VISIT #$visitCount • VICHARAX OFFLINE",
+                                text = "$totalRecordedActiveDays ACTIVE DAY(S) • VISIT #$visitCount",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -443,13 +422,14 @@ fun HomeDashboardTab(
 
                     Text(
                         text = "${strings.welcomeBack}, ${profile.name}!",
-                        fontSize = 22.sp,
+                        fontSize = 23.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color.White
                     )
                     Text(
                         text = profile.goal,
                         fontSize = 13.sp,
+                        lineHeight = 18.sp,
                         color = Color(0xFFE0F2FE)
                     )
                     Surface(
@@ -457,7 +437,7 @@ fun HomeDashboardTab(
                         color = Color(0xFF0F172A).copy(alpha = 0.35f)
                     ) {
                         Text(
-                            text = "${profile.subject} • ${savedGapReport?.assignedLevel ?: profile.skillLevel}",
+                            text = "${profile.subject} • ${profile.skillLevel}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFFCCFBF1),
@@ -466,10 +446,10 @@ fun HomeDashboardTab(
                     }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(14.dp))
 
                 Box(
-                    modifier = Modifier.size(74.dp),
+                    modifier = Modifier.size(76.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(
@@ -487,7 +467,7 @@ fun HomeDashboardTab(
                             color = Color.White
                         )
                         Text(
-                            text = "Mastery",
+                            text = "Topics",
                             fontSize = 10.sp,
                             color = Color(0xFFDBEAFE)
                         )
@@ -496,54 +476,62 @@ fun HomeDashboardTab(
             }
         }
 
-        // 7-Day Weekly Consistency Strip
+        // Activity-Driven Weekly Consistency Strip (Read-only, non-clickable)
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             shadowElevation = 1.dp
         ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Weekly Study Consistency", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text("${activeDays.size}/7 days", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.secondary)
+                    Column {
+                        Text("Activity-Driven Active Days", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(
+                            text = "Automatically logged from app usage, assessments & study",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = "${activeDays.size}/7 days",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
                 }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     weekDays.forEachIndexed { idx, day ->
-                        val checked = activeDays.contains(idx)
+                        val isActive = activeDays.contains(idx)
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable {
-                                    activeDays = if (checked) activeDays - idx else activeDays + idx
-                                }
-                                .padding(4.dp)
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(4.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(34.dp)
                                     .clip(CircleShape)
-                                    .background(if (checked) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant),
+                                    .background(if (isActive) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = if (checked) "✓" else day.take(1),
+                                    text = if (isActive) "✓" else day.take(1),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (checked) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = if (isActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Text(day, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(day, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -553,17 +541,20 @@ fun HomeDashboardTab(
         // Daily Study Goal + 25-Min Focus Sprint Row
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Surface(
-                onClick = { dailyGoalChecked = !dailyGoalChecked },
+                onClick = {
+                    dailyGoalChecked = !dailyGoalChecked
+                    ProfileStorage.recordActivityToday(context, profile.name)
+                },
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(20.dp),
                 color = if (dailyGoalChecked) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
                 border = BorderStroke(1.dp, if (dailyGoalChecked) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant),
                 shadowElevation = 1.dp
             ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -577,9 +568,9 @@ fun HomeDashboardTab(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Text("${profile.dailyHours} hrs/day", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                    Text("${profile.dailyHours} hrs/day", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
                     Text(
-                        text = if (dailyGoalChecked) "Logged offline ✓" else "Tap to check in",
+                        text = if (dailyGoalChecked) "Session completed ✓" else "Tap when finished",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -588,21 +579,24 @@ fun HomeDashboardTab(
 
             Surface(
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.surface,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 shadowElevation = 1.dp
             ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Icon(Icons.Default.Timer, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(16.dp))
                         Text("Focus Sprint", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                     Text(formattedTimer, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilledTonalIconButton(
-                            onClick = { isTimerRunning = !isTimerRunning },
-                            modifier = Modifier.size(28.dp)
+                            onClick = {
+                                isTimerRunning = !isTimerRunning
+                                ProfileStorage.recordActivityToday(context, profile.name)
+                            },
+                            modifier = Modifier.size(30.dp)
                         ) {
                             Icon(
                                 imageVector = if (isTimerRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -615,7 +609,7 @@ fun HomeDashboardTab(
                                 isTimerRunning = false
                                 secondsLeft = 25 * 60
                             },
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(30.dp)
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = "Reset", modifier = Modifier.size(15.dp))
                         }
@@ -624,95 +618,42 @@ fun HomeDashboardTab(
             }
         }
 
-        // Quick Actions Grid
-        Text(strings.quickActions, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Surface(
-                onClick = { onNavigate(1) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                shadowElevation = 2.dp
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Quiz, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    }
-                    Text("10-MCQ Assessment", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text(
-                        text = "Evaluate ${profile.subject} skills with instant answer review",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Surface(
-                onClick = { onNavigate(3) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                shadowElevation = 2.dp
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.secondaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-                    }
-                    Text("VicharaX AI Mentor", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text("Topic-scoped offline Llama 3.2 tutor", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-
-        // Open Full Learner Dashboard Card
+        // Single Clean Subject Roadmap Card (No duplicate Assessment or AI Mentor cards)
         Surface(
-            onClick = onOpenDashboard,
+            onClick = onOpenRoadmap,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            shadowElevation = 1.dp
+            shadowElevation = 2.dp
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(18.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Column {
-                        Text("Learner Dashboard & Credentials", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text("View profile, passcode, visit count & score history", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = "Open",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Map, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("${profile.subject} Learning Path", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(
+                            text = "${exploredTopics.size} of ${subjectTopics.size} core topics explored • Tap to view flow charts",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
