@@ -5,7 +5,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -74,13 +73,13 @@ fun ModelExecutionFlowCard(activeSubject: String) {
     )
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Icon(Icons.Default.Memory, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
@@ -130,7 +129,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
     var signUpPasscode by remember { mutableStateOf("") }
     var matchedExistingAccount by remember { mutableStateOf<StudentProfile?>(null) }
 
-    // Step 2: Student Profile Intake (Standard, Courses, Learn What / Interests + Custom Search, Duration, Language)
+    // Step 2: Student Profile Intake
     var selectedStandard by remember { mutableStateOf("Undergraduate / College") }
     var coursesInput by remember { mutableStateOf("Computer Science & Engineering") }
     var customTopicSearch by remember { mutableStateOf("") }
@@ -140,16 +139,16 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
     var targetDuration by remember { mutableStateOf("30 Days") }
     var preferredLanguage by remember { mutableStateOf("English") }
 
-    val standards = listOf("School (Class 9–12)", "Undergraduate / College", "Postgraduate / Research", "Self-Paced / Professional")
+    val standards = listOf("School (Class 9–12)", "Undergraduate / College", "Postgraduate", "Self-Paced")
     val presetSubjects = listOf(
         "Python",
-        "C Programming",
+        "Physics",
+        "Mathematics",
         "SQL & Databases",
+        "C Programming",
         "Data Structures & Algorithms",
         "History",
-        "Geography",
-        "Machine Learning & AI",
-        "Mathematics"
+        "Geography"
     )
     val hourOptions = listOf("1.0", "1.5", "2.0", "3.0")
     val durationOptions = listOf("15 Days", "30 Days", "60 Days", "90 Days")
@@ -159,8 +158,8 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(22.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Branded VicharaX Header (Strict single-line title)
         Box(
@@ -170,20 +169,20 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                     brush = Brush.linearGradient(
                         colors = listOf(Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF0D9488))
                     ),
-                    shape = RoundedCornerShape(24.dp)
+                    shape = RoundedCornerShape(22.dp)
                 )
-                .padding(20.dp)
+                .padding(18.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    VxBrandMark(sizeDp = 50)
+                    VxBrandMark(sizeDp = 46)
                     Column {
                         Text(
                             text = "VicharaX",
-                            fontSize = 26.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White,
                             maxLines = 1,
@@ -192,14 +191,15 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                         )
                         Text(
                             text = "Official 24×7 Offline AI Tutor • Arm Edge",
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color(0xFF99F6E4)
+                            color = Color(0xFF99F6E4),
+                            maxLines = 1
                         )
                     }
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(
                         text = if (currentStep == 1) "Step 1 of 2 • Account Authentication" else "Step 2 of 2 • Student Profile Intake",
                         fontSize = 12.sp,
@@ -212,7 +212,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                         trackColor = Color.White.copy(alpha = 0.25f),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(6.dp)
+                            .height(5.dp)
                             .clip(RoundedCornerShape(4.dp))
                     )
                 }
@@ -220,9 +220,6 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
         }
 
         if (currentStep == 1) {
-            // =================================================================
-            // STEP 1: SIGN IN / SIGN UP ONLY + "Next"
-            // =================================================================
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -233,7 +230,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                         isSignUpMode = false
                         signInError = null
                     },
-                    label = { Text("Sign In", fontWeight = FontWeight.Bold) },
+                    label = { Text("Sign In", fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false) },
                     modifier = Modifier.weight(1f)
                 )
                 FilterChip(
@@ -242,7 +239,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                         isSignUpMode = true
                         signInError = null
                     },
-                    label = { Text("Sign Up", fontWeight = FontWeight.Bold) },
+                    label = { Text("Sign Up", fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false) },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -250,25 +247,25 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
             if (!isSignUpMode) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     shadowElevation = 2.dp
                 ) {
                     Column(
-                        modifier = Modifier.padding(22.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         Text(
                             text = "Sign In",
-                            fontSize = 22.sp,
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Sign in to your local VicharaX account, then tap Next to review your Student Profile Intake.",
                             fontSize = 13.sp,
-                            lineHeight = 19.sp,
+                            lineHeight = 18.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
@@ -282,7 +279,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                                                 signInName = acc.name
                                                 signInError = null
                                             },
-                                            label = { Text(acc.name, fontWeight = FontWeight.SemiBold) }
+                                            label = { Text(acc.name, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false) }
                                         )
                                     }
                                 }
@@ -365,10 +362,10 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                             enabled = signInName.isNotBlank() && signInPasscode.isNotBlank(),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(54.dp),
+                                .height(52.dp),
                             shape = RoundedCornerShape(14.dp)
                         ) {
-                            Text("Next", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text("Next", fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1, softWrap = false)
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
                         }
@@ -377,25 +374,25 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
             } else {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     shadowElevation = 2.dp
                 ) {
                     Column(
-                        modifier = Modifier.padding(22.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         Text(
                             text = "Sign Up",
-                            fontSize = 22.sp,
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Create your VicharaX student account, then tap Next to configure your Student Profile Intake.",
                             fontSize = 13.sp,
-                            lineHeight = 19.sp,
+                            lineHeight = 18.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
@@ -439,10 +436,10 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                             enabled = signUpName.trim().isNotEmpty() && signUpPasscode.trim().length >= 4,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(54.dp),
+                                .height(52.dp),
                             shape = RoundedCornerShape(14.dp)
                         ) {
-                            Text("Next", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text("Next", fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1, softWrap = false)
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
                         }
@@ -451,35 +448,34 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
             }
         } else {
             // =================================================================
-            // STEP 2: STUDENT PROFILE INTAKE (Standard, Courses, Learn What / Interests + Search Bar,
-            //         Step-by-Step Model Flow, Multilingual Support + "Get Started")
+            // STEP 2: STUDENT PROFILE INTAKE (Compact spacing, zero dead gaps, single-line chips)
             // =================================================================
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
+                shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.surface,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 shadowElevation = 2.dp
             ) {
                 Column(
-                    modifier = Modifier.padding(22.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp)
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = "Student Profile Intake",
-                        fontSize = 23.sp,
+                        fontSize = 21.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Tell VicharaX your academic standard, enrolled courses, and what you want to learn so your 24×7 AI Tutor builds a customized study plan.",
-                        fontSize = 13.sp,
-                        lineHeight = 19.sp,
+                        text = "Configure your standard, courses, and what you want to learn so VicharaX tailors your roadmap, MCQs, and AI Tutor.",
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    // 1. Academic Standard
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // 1. Academic Standard (2x2 clean grid)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("Academic Standard / Level", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         standards.chunked(2).forEach { rowStd ->
                             Row(
@@ -490,7 +486,15 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                                     FilterChip(
                                         selected = selectedStandard == std,
                                         onClick = { selectedStandard = std },
-                                        label = { Text(std, fontSize = 11.sp, maxLines = 1) },
+                                        label = {
+                                            Text(
+                                                text = std,
+                                                fontSize = 11.sp,
+                                                maxLines = 1,
+                                                softWrap = false,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        },
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
@@ -503,15 +507,15 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                         value = coursesInput,
                         onValueChange = { coursesInput = it },
                         label = { Text("Courses / Stream") },
-                        placeholder = { Text("e.g., B.Tech CSE, Data Science, Humanities") },
+                        placeholder = { Text("e.g., B.Tech CSE, Science, Humanities") },
                         leadingIcon = { Icon(Icons.Default.School, contentDescription = null) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp)
                     )
 
-                    // 3. Learn What / Interests + Search Bar for ANY Custom Topic (History, Geography, Python, SQL, etc.)
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // 3. Learn What / Primary Subject Interest + Search Bar
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("Learn What / Primary Subject Interest", fontSize = 13.sp, fontWeight = FontWeight.Bold)
 
                         OutlinedTextField(
@@ -523,7 +527,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                                 }
                             },
                             label = { Text("Search or Enter Any Topic") },
-                            placeholder = { Text("e.g., History, Geography, Python, SQL, C...") },
+                            placeholder = { Text("e.g., Physics, Mathematics, History, Python, SQL...") },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
@@ -547,7 +551,9 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                                                 text = subj,
                                                 fontSize = 12.sp,
                                                 fontWeight = if (selectedSubject.equals(subj, ignoreCase = true)) FontWeight.Bold else FontWeight.Medium,
-                                                maxLines = 1
+                                                maxLines = 1,
+                                                softWrap = false,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                         },
                                         modifier = Modifier.weight(1f)
@@ -561,74 +567,106 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                         value = interestNotes,
                         onValueChange = { interestNotes = it },
                         label = { Text("Specific Goals & Focus Areas") },
-                        placeholder = { Text("e.g., Exam prep, practical coding, concept mastery") },
+                        placeholder = { Text("e.g., Exam prep, problem solving, concepts") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp)
                     )
 
-                    // 4. Compact Daily Hours & Study Duration
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // 4. Daily Study Hours (2x2 clean grid, zero trailing gap)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("Daily Study Hours", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            hourOptions.forEach { hrs ->
-                                FilterChip(
-                                    selected = dailyHours == hrs,
-                                    onClick = { dailyHours = hrs },
-                                    label = { Text("$hrs hrs/day", fontSize = 12.sp) }
-                                )
-                            }
-                        }
-                    }
-
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Study Plan Duration", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            durationOptions.forEach { dur ->
-                                FilterChip(
-                                    selected = targetDuration == dur,
-                                    onClick = { targetDuration = dur },
-                                    label = { Text(dur, fontSize = 12.sp) }
-                                )
-                            }
-                        }
-                    }
-
-                    // 5. Multilingual Support (8 Indian & Global Languages)
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Preferred Tutor Language", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            languages.chunked(3).forEach { rowLangs ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    rowLangs.forEach { lang ->
-                                        FilterChip(
-                                            selected = preferredLanguage == lang,
-                                            onClick = { preferredLanguage = lang },
-                                            label = { Text(lang, fontSize = 12.sp, maxLines = 1) },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    }
+                        hourOptions.chunked(2).forEach { rowHrs ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                rowHrs.forEach { hrs ->
+                                    FilterChip(
+                                        selected = dailyHours == hrs,
+                                        onClick = { dailyHours = hrs },
+                                        label = {
+                                            Text(
+                                                text = "$hrs hrs/day",
+                                                fontSize = 12.sp,
+                                                maxLines = 1,
+                                                softWrap = false
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
                                 }
                             }
                         }
                     }
 
-                    // 6. Step-by-Step Running Model Flow Indicator
+                    // 5. Study Plan Duration (2x2 grid so "90 Days" never wraps onto two lines)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Study Plan Duration", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        durationOptions.chunked(2).forEach { rowDur ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                rowDur.forEach { dur ->
+                                    FilterChip(
+                                        selected = targetDuration == dur,
+                                        onClick = { targetDuration = dur },
+                                        label = {
+                                            Text(
+                                                text = dur,
+                                                fontSize = 12.sp,
+                                                maxLines = 1,
+                                                softWrap = false
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // 6. Multilingual Support (8 Languages in clean 2-column grid)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Preferred Tutor Language", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        languages.chunked(2).forEach { rowLangs ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                rowLangs.forEach { lang ->
+                                    FilterChip(
+                                        selected = preferredLanguage == lang,
+                                        onClick = { preferredLanguage = lang },
+                                        label = {
+                                            Text(
+                                                text = lang,
+                                                fontSize = 12.sp,
+                                                maxLines = 1,
+                                                softWrap = false
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // 7. Step-by-Step Running Model Flow Indicator
                     ModelExecutionFlowCard(activeSubject = selectedSubject)
 
                     // Navigation Buttons: Back & Get Started
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(
                             onClick = { currentStep = 1 },
-                            modifier = Modifier.weight(1f).height(54.dp),
+                            modifier = Modifier.weight(1f).height(52.dp),
                             shape = RoundedCornerShape(14.dp)
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Back", fontWeight = FontWeight.Bold)
+                            Text("Back", fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                         }
 
                         Button(
@@ -656,12 +694,12 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                                 onComplete(savedProfile)
                             },
                             enabled = selectedSubject.isNotBlank(),
-                            modifier = Modifier.weight(1.6f).height(54.dp),
+                            modifier = Modifier.weight(1.6f).height(52.dp),
                             shape = RoundedCornerShape(14.dp)
                         ) {
                             Icon(Icons.Default.RocketLaunch, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Get Started", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text("Get Started", fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, softWrap = false)
                         }
                     }
                 }

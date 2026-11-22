@@ -224,7 +224,7 @@ fun RoadmapScreen(
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                         Text(
-                            text = "Step-by-Step Learning Flow Chart (From Scratch → Mastery)",
+                            text = "Sequential Subtopic Progression & Reference Links",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.primary

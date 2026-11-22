@@ -11,9 +11,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +27,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun AssessmentScreen(
@@ -33,46 +38,50 @@ fun AssessmentScreen(
     onNavigateToRoadmap: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val questions = remember(profile.subject) {
-        LearningEngine.getDiagnosticQuestions(profile.subject)
-    }
-    var selectedAnswers by remember { mutableStateOf(emptyMap<Int, Int>()) }
-    var isSubmitted by remember { mutableStateOf(false) }
-    var evaluationReport by remember { mutableStateOf(AppStorage.loadGapReport(context)) }
+    var activeAssessmentTopic by remember(profile.subject) { mutableStateOf(profile.subject) }
+    var topicSearchInput by remember { mutableStateOf("") }
 
-    val correctCount = remember(selectedAnswers, isSubmitted) {
+    val questions = remember(activeAssessmentTopic) {
+        LearningEngine.getDiagnosticQuestions(activeAssessmentTopic)
+    }
+    var selectedAnswers by remember(activeAssessmentTopic) { mutableStateOf(emptyMap<Int, Int>()) }
+    var isSubmitted by remember(activeAssessmentTopic) { mutableStateOf(false) }
+    var evaluationReport by remember(activeAssessmentTopic) { mutableStateOf<KnowledgeGapReport?>(null) }
+
+    val correctCount = remember(selectedAnswers, isSubmitted, questions) {
         questions.count { q -> selectedAnswers[q.id] == q.correctIndex }
     }
+    val optionLetters = listOf("A", "B", "C", "D")
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Header Banner
+        // Compact Assessment Header Banner
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
                     brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF1E3A8A), Color(0xFF0D9488))
+                        colors = listOf(Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF0D9488))
                     ),
-                    shape = RoundedCornerShape(20.dp)
+                    shape = RoundedCornerShape(18.dp)
                 )
-                .padding(18.dp)
+                .padding(16.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Default.Quiz, contentDescription = null, tint = Color(0xFF5EEAD4))
+                        Icon(Icons.Default.Quiz, contentDescription = null, tint = Color(0xFF5EEAD4), modifier = Modifier.size(18.dp))
                         Text(
-                            text = "Skill Assessment (${profile.subject})",
-                            fontSize = 18.sp,
+                            text = "Assessment: $activeAssessmentTopic",
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White
                         )
@@ -82,7 +91,7 @@ fun AssessmentScreen(
                         color = Color.White.copy(alpha = 0.18f)
                     ) {
                         Text(
-                            text = if (isSubmitted) "$correctCount/${questions.size} Score" else "${selectedAnswers.size}/${questions.size}",
+                            text = if (isSubmitted) "$correctCount/${questions.size}" else "${selectedAnswers.size}/${questions.size}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
@@ -93,11 +102,11 @@ fun AssessmentScreen(
 
                 Text(
                     text = if (isSubmitted) {
-                        "Assessment evaluated! Review each question below to see your status and the correct answers."
+                        "Evaluated! Review your Correct / Incorrect status and the exact Correct Answer below each question."
                     } else {
-                        "Complete all ${questions.size} MCQs to diagnose skill gaps, unlock instant answer explanations, and calibrate your study roadmap."
+                        "Answer all ${questions.size} topic-specific MCQs below or search any subject to generate a new 10-MCQ quiz."
                     },
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     color = Color(0xFFE0F2FE)
                 )
 
@@ -113,11 +122,45 @@ fun AssessmentScreen(
                     trackColor = Color.White.copy(alpha = 0.25f),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(6.dp)
+                        .height(5.dp)
                         .clip(RoundedCornerShape(4.dp))
                 )
             }
         }
+
+        // Instant Topic Search Bar for Generating 10 MCQs on ANY Subject (Physics, Math, History, etc.)
+        OutlinedTextField(
+            value = topicSearchInput,
+            onValueChange = { topicSearchInput = it },
+            placeholder = { Text("Generate 10 MCQs for any topic (e.g., Physics, Math)...", fontSize = 13.sp) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            trailingIcon = {
+                if (topicSearchInput.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(
+                            onClick = {
+                                activeAssessmentTopic = topicSearchInput.trim()
+                                ProfileStorage.recordActivityToday(context, profile.name)
+                            }
+                        ) {
+                            Text("Generate", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                        IconButton(
+                            onClick = {
+                                topicSearchInput = ""
+                                activeAssessmentTopic = profile.subject
+                            },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Reset", modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp)
+        )
 
         // Post-Submission Summary Card
         if (isSubmitted && evaluationReport != null) {
@@ -136,13 +179,13 @@ fun AssessmentScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Assessment Result", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("Assessment Score", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             Text(
-                                text = "$scorePct% • ${report.assignedLevel}",
+                                text = "$correctCount/${questions.size} ($scorePct%) • ${report.assignedLevel}",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -150,12 +193,6 @@ fun AssessmentScreen(
                             )
                         }
                     }
-
-                    Text(
-                        text = "Strong Topics: ${report.strongTopics.size} • Weak Topics Mapped: ${report.weakTopics.size}",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(
@@ -184,7 +221,7 @@ fun AssessmentScreen(
             }
         }
 
-        // 10 MCQ Cards with Per-Question Evaluation Feedback
+        // 10 MCQ Cards with Shuffled A/B/C/D Options & Per-Question Feedback
         questions.forEach { q ->
             val userChoice = selectedAnswers[q.id]
             val isCorrect = isSubmitted && userChoice == q.correctIndex
@@ -260,6 +297,7 @@ fun AssessmentScreen(
                         val isSelected = userChoice == idx
                         val isRightOption = isSubmitted && idx == q.correctIndex
                         val isWrongSelection = isSubmitted && isSelected && idx != q.correctIndex
+                        val letter = optionLetters.getOrElse(idx) { "${idx + 1}" }
 
                         val optionBgColor = when {
                             isRightOption -> Color(0xFFD1FAE5)
@@ -293,7 +331,7 @@ fun AssessmentScreen(
                             border = optionBorder
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
@@ -314,7 +352,7 @@ fun AssessmentScreen(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
-                                    text = option,
+                                    text = "$letter. $option",
                                     fontSize = 14.sp,
                                     fontWeight = if (isSelected || isRightOption) FontWeight.SemiBold else FontWeight.Normal,
                                     color = optionTextColor
@@ -325,6 +363,7 @@ fun AssessmentScreen(
 
                     // Explicit Correct Answer Feedback Callout when User's Answer is Incorrect
                     if (isWrong) {
+                        val correctLetter = optionLetters.getOrElse(q.correctIndex) { "" }
                         val correctText = q.options.getOrElse(q.correctIndex) { "" }
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
@@ -337,13 +376,13 @@ fun AssessmentScreen(
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = "Correct Answer: $correctText",
+                                    text = "Correct Answer: $correctLetter. $correctText",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF065F46)
                                 )
                                 Text(
-                                    text = "Prerequisite Concept: ${q.prerequisite}",
+                                    text = "Core Concept: ${q.prerequisite}",
                                     fontSize = 12.sp,
                                     color = Color(0xFF7F1D1D)
                                 )
@@ -359,13 +398,17 @@ fun AssessmentScreen(
             Button(
                 onClick = {
                     val report = LearningEngine.evaluateDiagnostic(questions, selectedAnswers)
-                    val newRoadmap = LearningEngine.generateRoadmap(profile, report)
+                    val newRoadmap = LearningEngine.generateRoadmap(profile.copy(subject = activeAssessmentTopic), report)
                     evaluationReport = report
                     isSubmitted = true
                     AppStorage.saveRoadmapData(context, report, newRoadmap)
                     val scoreVal = questions.count { q -> selectedAnswers[q.id] == q.correctIndex }
-                    val timeStr = java.text.SimpleDateFormat("dd MMM, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
-                    ProfileStorage.saveAssessmentScore(context, profile.name, AssessmentRecord(profile.subject, scoreVal, questions.size, report.assignedLevel, timeStr))
+                    val timeStr = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date())
+                    ProfileStorage.saveAssessmentScore(
+                        context,
+                        profile.name,
+                        AssessmentRecord(activeAssessmentTopic, scoreVal, questions.size, report.assignedLevel, timeStr)
+                    )
                 },
                 enabled = selectedAnswers.size == questions.size,
                 modifier = Modifier
