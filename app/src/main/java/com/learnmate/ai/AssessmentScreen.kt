@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.text.SimpleDateFormat
@@ -243,20 +244,24 @@ fun AssessmentScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer
-                        ) {
-                            Text(
-                                text = "Q${q.id} • ${q.topic}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
+                        Box(modifier = Modifier.weight(1f)) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer
+                            ) {
+                                Text(
+                                    text = "Q${q.id} • ${q.topic}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
                         }
 
                         if (isSubmitted) {
@@ -265,7 +270,7 @@ fun AssessmentScreen(
                                 color = if (isCorrect) Color(0xFFD1FAE5) else Color(0xFFFEE2E2)
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
@@ -279,7 +284,10 @@ fun AssessmentScreen(
                                         text = if (isCorrect) "Correct" else "Incorrect",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = if (isCorrect) Color(0xFF065F46) else Color(0xFF991B1B)
+                                        color = if (isCorrect) Color(0xFF065F46) else Color(0xFF991B1B),
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Clip
                                     )
                                 }
                             }
@@ -443,3 +451,4 @@ fun AssessmentScreen(
         }
     }
 }
+
