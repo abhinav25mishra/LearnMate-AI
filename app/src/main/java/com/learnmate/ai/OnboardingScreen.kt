@@ -6,7 +6,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -14,11 +13,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Person
@@ -141,12 +139,12 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
     var currentStep by remember { mutableStateOf(1) }
     var isSignUpMode by remember { mutableStateOf(false) }
 
-    // Step 1: Modern Sign In / Sign Up State
-    var emailInput by remember { mutableStateOf(existingAccounts.firstOrNull()?.email ?: "") }
+    // Step 1: Clean Sign In / Sign Up State (Full Name, Username, PIN)
     var fullNameInput by remember { mutableStateOf("") }
-    var passwordInput by remember { mutableStateOf("") }
+    var usernameInput by remember { mutableStateOf(existingAccounts.firstOrNull()?.username ?: "") }
+    var pinInput by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(true) }
-    var showPassword by remember { mutableStateOf(false) }
+    var showPin by remember { mutableStateOf(false) }
     var authError by remember { mutableStateOf<String?>(null) }
     var showForgotDialog by remember { mutableStateOf(false) }
     var matchedExistingAccount by remember { mutableStateOf<StudentProfile?>(null) }
@@ -208,16 +206,16 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
     }
 
     if (showForgotDialog) {
-        val found = ProfileStorage.findAccountByIdentifier(context, emailInput)
+        val found = ProfileStorage.findAccountByIdentifier(context, usernameInput)
         AlertDialog(
             onDismissRequest = { showForgotDialog = false },
-            title = { Text("Password Recovery", fontWeight = FontWeight.Bold) },
+            title = { Text("PIN Recovery", fontWeight = FontWeight.Bold) },
             text = {
                 Text(
                     text = if (found != null) {
-                        "Local account found for ${found.name} (${found.email}).\nYour saved password/PIN is: ${found.passcode}"
+                        "Local account found for ${found.name} (@${found.username}).\nYour saved PIN is: ${found.passcode}"
                     } else {
-                        "Enter your registered email or learner name in the field first, or tap 'Sign up' below to create a new local account."
+                        "Enter your registered username in 'Your Username' first, or tap 'Sign up' below to create a new local account."
                     },
                     fontSize = 13.sp
                 )
@@ -232,14 +230,13 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
 
     if (currentStep == 1) {
         // =====================================================================
-        // STEP 1: MODERN LIGHT-GRID SIGN IN / SIGN UP SCREEN
+        // STEP 1: CLEAN SIGN IN / SIGN UP SCREEN (NO SOCIAL ICONS, NO EMAIL)
         // =====================================================================
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF8FAFC))
         ) {
-            // Subtle architectural grid background
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val step = 34.dp.toPx()
                 val lineColor = Color(0xFFE2E8F0).copy(alpha = 0.65f)
@@ -263,9 +260,9 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Harmonious VX Brand Mark + Single-Line VicharaX Title (no awkward white box)
+                // VX Brand Mark + Single-Line VicharaX Title
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -317,145 +314,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                             )
                         }
 
-                        // Circular Social / Quick-Continue Integration Buttons (Google, Apple, Passkey)
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Google Quick Sign-In
-                            Surface(
-                                onClick = {
-                                    val resolvedEmail = emailInput.trim().ifEmpty { "student.google@vicharax.ai" }
-                                    val resolvedName = fullNameInput.trim().ifEmpty {
-                                        resolvedEmail.substringBefore("@").replace(".", " ")
-                                            .split(" ").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
-                                    }
-                                    val existing = ProfileStorage.findAccountByIdentifier(context, resolvedEmail)
-                                    matchedExistingAccount = existing
-                                    emailInput = resolvedEmail
-                                    fullNameInput = existing?.name ?: resolvedName
-                                    if (passwordInput.isBlank()) passwordInput = existing?.passcode ?: "1234"
-                                    if (existing != null) {
-                                        selectedStandard = existing.standard
-                                        coursesInput = existing.courses
-                                        selectedSubject = existing.subject
-                                        interestNotes = existing.interests
-                                        dailyHours = existing.dailyHours
-                                        targetDuration = existing.targetDate
-                                        preferredLanguage = existing.preferredLanguage
-                                    }
-                                    currentStep = 2
-                                },
-                                modifier = Modifier.size(50.dp),
-                                shape = CircleShape,
-                                color = Color.White,
-                                border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
-                                shadowElevation = 1.dp
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = "G",
-                                        fontSize = 19.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = Color(0xFFEA4335)
-                                    )
-                                }
-                            }
-
-                            // Apple Quick Sign-In
-                            Surface(
-                                onClick = {
-                                    val resolvedEmail = emailInput.trim().ifEmpty { "student.apple@vicharax.ai" }
-                                    val resolvedName = fullNameInput.trim().ifEmpty {
-                                        resolvedEmail.substringBefore("@").replace(".", " ")
-                                            .split(" ").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
-                                    }
-                                    val existing = ProfileStorage.findAccountByIdentifier(context, resolvedEmail)
-                                    matchedExistingAccount = existing
-                                    emailInput = resolvedEmail
-                                    fullNameInput = existing?.name ?: resolvedName
-                                    if (passwordInput.isBlank()) passwordInput = existing?.passcode ?: "1234"
-                                    if (existing != null) {
-                                        selectedStandard = existing.standard
-                                        coursesInput = existing.courses
-                                        selectedSubject = existing.subject
-                                        interestNotes = existing.interests
-                                        dailyHours = existing.dailyHours
-                                        targetDuration = existing.targetDate
-                                        preferredLanguage = existing.preferredLanguage
-                                    }
-                                    currentStep = 2
-                                },
-                                modifier = Modifier.size(50.dp),
-                                shape = CircleShape,
-                                color = Color.White,
-                                border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
-                                shadowElevation = 1.dp
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = "",
-                                        fontSize = 21.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF0F172A)
-                                    )
-                                }
-                            }
-
-                            // Local Offline Passkey Quick Sign-In
-                            Surface(
-                                onClick = {
-                                    val saved = existingAccounts.firstOrNull()
-                                    if (saved != null) {
-                                        matchedExistingAccount = saved
-                                        emailInput = saved.email
-                                        fullNameInput = saved.name
-                                        passwordInput = saved.passcode
-                                        selectedStandard = saved.standard
-                                        coursesInput = saved.courses
-                                        selectedSubject = saved.subject
-                                        interestNotes = saved.interests
-                                        dailyHours = saved.dailyHours
-                                        targetDuration = saved.targetDate
-                                        preferredLanguage = saved.preferredLanguage
-                                        currentStep = 2
-                                    } else {
-                                        authError = "No saved passkey yet. Enter your Email & Password below or Sign up."
-                                    }
-                                },
-                                modifier = Modifier.size(50.dp),
-                                shape = CircleShape,
-                                color = Color.White,
-                                border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
-                                shadowElevation = 1.dp
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.Key,
-                                        contentDescription = "Local Passkey",
-                                        tint = Color(0xFF1D4ED8),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        // "OR" Divider
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFFE2E8F0))
-                            Text(
-                                text = "OR",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF94A3B8)
-                            )
-                            HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFFE2E8F0))
-                        }
-
+                        // Sign Up: "Your Full Name" at the very top of form fields
                         if (isSignUpMode) {
                             OutlinedTextField(
                                 value = fullNameInput,
@@ -463,7 +322,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                                     fullNameInput = it
                                     authError = null
                                 },
-                                label = { Text("Full Name") },
+                                label = { Text("Your Full Name") },
                                 placeholder = { Text("e.g., Abhinav Mishra") },
                                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF64748B)) },
                                 singleLine = true,
@@ -478,16 +337,16 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                             )
                         }
 
+                        // "Your Username" (First on Sign In, directly below Full Name on Sign Up)
                         OutlinedTextField(
-                            value = emailInput,
+                            value = usernameInput,
                             onValueChange = {
-                                emailInput = it
+                                usernameInput = it
                                 authError = null
                             },
-                            label = { Text("Your Email Address") },
-                            placeholder = { Text("student@example.com") },
-                            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = Color(0xFF64748B)) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            label = { Text("Your Username") },
+                            placeholder = { Text("e.g., abhinav_m") },
+                            leadingIcon = { Icon(Icons.Default.AlternateEmail, contentDescription = null, tint = Color(0xFF64748B)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
@@ -499,25 +358,27 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                             )
                         )
 
+                        // "PIN" directly below Username
                         OutlinedTextField(
-                            value = passwordInput,
+                            value = pinInput,
                             onValueChange = {
-                                passwordInput = it
+                                pinInput = it
                                 authError = null
                             },
-                            label = { Text("Password") },
-                            placeholder = { Text("4+ characters or PIN") },
+                            label = { Text("PIN") },
+                            placeholder = { Text("4+ digit PIN") },
                             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF64748B)) },
                             trailingIcon = {
-                                IconButton(onClick = { showPassword = !showPassword }) {
+                                IconButton(onClick = { showPin = !showPin }) {
                                     Icon(
-                                        imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                        contentDescription = "Toggle Password",
+                                        imageVector = if (showPin) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = "Toggle PIN",
                                         tint = Color(0xFF64748B)
                                     )
                                 }
                             },
-                            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                            visualTransformation = if (showPin) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
@@ -529,7 +390,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                             )
                         )
 
-                        // Remember me + Forgot password? row
+                        // Remember me + Forgot PIN? row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -551,7 +412,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                             if (!isSignUpMode) {
                                 TextButton(onClick = { showForgotDialog = true }) {
                                     Text(
-                                        text = "Forgot password?",
+                                        text = "Forgot PIN?",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = Color(0xFF1D4ED8)
@@ -576,11 +437,11 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                             }
                         }
 
-                        // Bold Dark Primary CTA Button ("Sign in" / "Next")
+                        // Bold Dark Primary CTA Button
                         Button(
                             onClick = {
                                 if (!isSignUpMode) {
-                                    val verified = ProfileStorage.verifyCredentials(context, emailInput, passwordInput)
+                                    val verified = ProfileStorage.verifyCredentials(context, usernameInput, pinInput)
                                     if (verified != null) {
                                         matchedExistingAccount = verified
                                         selectedStandard = verified.standard
@@ -596,7 +457,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                                         authError = if (existingAccounts.isEmpty()) {
                                             "No local account found yet. Tap 'Sign up' below to create your account."
                                         } else {
-                                            "Invalid email/name or password. Please check your credentials."
+                                            "Invalid username or PIN. Please check your credentials."
                                         }
                                     }
                                 } else {
@@ -604,7 +465,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                                     currentStep = 2
                                 }
                             },
-                            enabled = emailInput.isNotBlank() && passwordInput.trim().length >= 4 &&
+                            enabled = usernameInput.isNotBlank() && pinInput.trim().length >= 4 &&
                                 (!isSignUpMode || fullNameInput.isNotBlank()),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -665,7 +526,6 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Branded VicharaX Header (Strict single-line title)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -747,7 +607,6 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    // 1. Academic Standard / Level
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("Academic Standard / Level", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         standards.chunked(2).forEach { rowStd ->
@@ -785,7 +644,6 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                         }
                     }
 
-                    // 2. Enrolled Courses / Stream
                     OutlinedTextField(
                         value = coursesInput,
                         onValueChange = { coursesInput = it },
@@ -797,7 +655,6 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                         shape = RoundedCornerShape(14.dp)
                     )
 
-                    // 3. Dedicated Box: "Learning Your Primary Interest"
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -923,7 +780,6 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                         shape = RoundedCornerShape(14.dp)
                     )
 
-                    // 4. Daily Study Hours
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("Daily Study Hours", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         hourOptions.chunked(2).forEach { rowHrs ->
@@ -950,7 +806,6 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                         }
                     }
 
-                    // 5. Study Plan Duration
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("Study Plan Duration", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         durationOptions.chunked(2).forEach { rowDur ->
@@ -977,7 +832,6 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                         }
                     }
 
-                    // 6. Preferred Tutor Language: Only English, Hindi + "+" button
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("Preferred Tutor Language", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         Text(
@@ -1046,10 +900,8 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                         }
                     }
 
-                    // 7. Step-by-Step Running Model Flow Indicator
                     ModelExecutionFlowCard(activeSubject = selectedSubject)
 
-                    // Navigation Buttons: Back & Get Started
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(
                             onClick = { currentStep = 1 },
@@ -1065,17 +917,16 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                             onClick = {
                                 val dateStr = matchedExistingAccount?.createdAt
                                     ?: SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date())
-                                val resolvedEmail = matchedExistingAccount?.email ?: emailInput.trim()
+                                val resolvedUsername = matchedExistingAccount?.username ?: usernameInput.trim()
                                 val resolvedName = matchedExistingAccount?.name
                                     ?: fullNameInput.trim().ifEmpty {
-                                        resolvedEmail.substringBefore("@").replace(".", " ")
-                                            .split(" ").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+                                        resolvedUsername.replaceFirstChar { it.uppercase() }
                                     }
-                                val resolvedPasscode = matchedExistingAccount?.passcode ?: passwordInput.trim()
+                                val resolvedPin = matchedExistingAccount?.passcode ?: pinInput.trim()
                                 val activeTopic = selectedSubject.ifBlank { "Python" }
                                 val savedProfile = StudentProfile(
                                     name = resolvedName,
-                                    email = resolvedEmail,
+                                    username = resolvedUsername,
                                     standard = selectedStandard,
                                     courses = coursesInput.trim().ifEmpty { "General Studies" },
                                     goal = "Master $activeTopic ($targetDuration Study Plan)",
@@ -1085,7 +936,7 @@ fun OnboardingScreen(onComplete: (StudentProfile) -> Unit) {
                                     dailyHours = dailyHours,
                                     targetDate = targetDuration,
                                     preferredLanguage = preferredLanguage,
-                                    passcode = resolvedPasscode,
+                                    passcode = resolvedPin,
                                     createdAt = dateStr
                                 )
                                 ProfileStorage.saveProfile(context, savedProfile, persistSession = rememberMe)

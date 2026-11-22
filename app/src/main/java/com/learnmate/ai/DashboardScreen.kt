@@ -332,7 +332,7 @@ fun DashboardScreen(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 DashInfoRow("Learner Name", profile.name)
-                DashInfoRow("Email", profile.email)
+                DashInfoRow("Username", "@${profile.username}")
                 DashInfoRow("Standard", profile.standard)
                 DashInfoRow("Courses", profile.courses)
                 DashInfoRow("Focus Areas", profile.interests)
@@ -465,4 +465,5 @@ private fun DashInfoRow(label: String, value: String) {
         Text(value, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
     }
 }
+
 
