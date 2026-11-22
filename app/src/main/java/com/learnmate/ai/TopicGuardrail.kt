@@ -2,7 +2,28 @@
 
 object TopicGuardrail {
 
-    private val domainKeywords: Map<String, Set<String>> = mapOf(
+    private val domainLexicons: Map<String, Set<String>> = mapOf(
+        "cybersecurity" to setOf(
+            "cybersecurity", "cyber", "security", "encryption", "decrypt", "decryption", "symmetric",
+            "asymmetric", "aes", "rsa", "sha", "md5", "hash", "hashing", "nmap", "scan", "scanning",
+            "port", "ports", "ip", "subnet", "tcp", "udp", "icmp", "packet", "wireshark", "firewall",
+            "ids", "ips", "vpn", "proxy", "ssl", "tls", "https", "certificate", "pki", "public key",
+            "private key", "ssh", "authentication", "authorization", "2fa", "mfa", "oauth", "jwt",
+            "malware", "ransomware", "trojan", "virus", "worm", "phishing", "social engineering",
+            "xss", "csrf", "sql injection", "sqli", "buffer overflow", "zero day", "exploit",
+            "vulnerability", "cve", "penetration", "pentest", "metasploit", "kali", "burp",
+            "siem", "soc", "incident", "forensics", "cryptography", "cipher", "ceh", "owasp"
+        ),
+        "networking" to setOf(
+            "network", "networking", "osi", "tcp", "udp", "ip", "ipv4", "ipv6", "subnet", "subnetting",
+            "cidr", "router", "switch", "hub", "gateway", "dns", "dhcp", "http", "https", "ftp", "ssh",
+            "arp", "icmp", "bgp", "ospf", "vlan", "nat", "mac", "ethernet", "wifi", "latency", "bandwidth"
+        ),
+        "data science" to setOf(
+            "data science", "dataset", "pandas", "numpy", "matplotlib", "seaborn", "eda", "exploratory",
+            "outlier", "missing value", "imputation", "correlation", "regression", "classification",
+            "clustering", "hypothesis", "p-value", "distribution", "visualization", "feature", "model"
+        ),
         "mathematics" to setOf(
             "math", "mathematics", "algebra", "geometry", "trigonometry", "calculus", "arithmetic",
             "equation", "formula", "number", "numbers", "integer", "fraction", "decimal", "percent",
@@ -74,10 +95,16 @@ object TopicGuardrail {
         )
     )
 
+    private val nonAcademicTrivialTerms: Set<String> = setOf(
+        "capital of", "prime minister", "president of", "who is the father of",
+        "cricket", "football", "fifa", "ipl", "bollywood", "hollywood", "movie", "song",
+        "recipe", "cooking", "biryani", "horoscope", "astrology", "zodiac", "celebrity", "joke"
+    )
+
     private val conversationalFollowUps = setOf(
         "explain", "example", "examples", "why", "how", "what", "define", "definition", "difference",
         "compare", "summary", "summarize", "detail", "details", "step by step", "hint", "practice",
-        "question", "quiz", "test", "more", "again", "clarify", "simplify", "code", "program"
+        "question", "quiz", "test", "more", "again", "clarify", "simplify", "code", "program", "roadmap"
     )
 
     fun isQuestionAllowed(
@@ -89,7 +116,7 @@ object TopicGuardrail {
         val topicLower = selectedTopic.trim().lowercase()
         if (qLower.isEmpty() || topicLower.isEmpty()) return true
 
-        // 1. Direct mention of selected topic or any subtopic
+        // 1. Direct match against active subject or its subtopics
         if (qLower.contains(topicLower)) return true
         val topicTokens = topicLower.split(Regex("[^a-z0-9+#]+")).filter { it.length >= 2 }
         if (topicTokens.any { token -> Regex("\\b${Regex.escape(token)}\\b").containsMatchIn(qLower) }) {
@@ -99,46 +126,46 @@ object TopicGuardrail {
             return true
         }
 
-        // 2. Special handling for Mathematics: allow arithmetic expressions, numbers, and math symbols (e.g., "2 + 2", "5*8", "x^2 = 9")
+        // 2. Quantitative / arithmetic expressions when studying Mathematics
         if (topicLower.contains("math")) {
             val hasDigit = qLower.any { it.isDigit() }
-            val hasMathOperator = qLower.any { it in charArrayOf('+', '-', '*', '/', '=', '^', '%', '√', 'π', '<', '>') }
-            if (hasDigit && (hasMathOperator || qLower.length <= 24)) {
+            val hasMathSymbol = qLower.any { it in charArrayOf('+', '-', '*', '/', '=', '^', '%', '√', 'π', '<', '>') }
+            if (hasDigit && (hasMathSymbol || qLower.length <= 24)) {
                 return true
             }
         }
 
-        // 3. Special handling for Physics: allow numerical/unit/formula expressions (e.g., "F = ma", "9.8 m/s^2", "10 N")
-        if (topicLower.contains("physic")) {
-            val hasPhysicsPattern = Regex("\\b(f\\s*=|v\\s*=|e\\s*=|m/s|kg|newton|joule|watt|volt|amp|ohm|hz)\\b").containsMatchIn(qLower)
-            if (hasPhysicsPattern) return true
+        // 3. Reject obvious non-academic trivia when it does not match the active subject
+        val isTrivialOffTopic = nonAcademicTrivialTerms.any { phrase ->
+            !topicLower.contains(phrase) && qLower.contains(phrase)
         }
+        if (isTrivialOffTopic) return false
 
-        // 4. Domain keyword bank matching for the active topic
-        val matchedBank = domainKeywords.entries.firstOrNull { (domainKey, _) ->
+        // 4. Check domain lexicon for the active subject
+        val activeLexicon = domainLexicons.entries.firstOrNull { (domainKey, _) ->
             topicLower.contains(domainKey) || domainKey.contains(topicLower)
         }?.value
 
-        if (matchedBank != null) {
-            if (matchedBank.any { kw -> Regex("\\b${Regex.escape(kw)}\\b").containsMatchIn(qLower) }) {
-                return true
-            }
-            // Reject if it clearly belongs to a DIFFERENT known domain
-            val belongsToOtherDomain = domainKeywords.any { (otherDomain, otherKeywords) ->
-                !topicLower.contains(otherDomain) && !otherDomain.contains(topicLower) &&
-                    otherKeywords.any { kw -> kw.length >= 4 && Regex("\\b${Regex.escape(kw)}\\b").containsMatchIn(qLower) }
-            }
-            if (belongsToOtherDomain) return false
+        if (activeLexicon != null && activeLexicon.any { kw -> Regex("\\b${Regex.escape(kw)}\\b").containsMatchIn(qLower) }) {
+            return true
         }
 
-        // 5. Allow short contextual follow-ups ("give an example", "explain step by step") if not referencing another domain
+        // 5. Reject if the question clearly belongs to a completely different preset domain
+        val hitsUnrelatedDomain = domainLexicons.any { (otherDomain, otherKeywords) ->
+            !topicLower.contains(otherDomain) && !otherDomain.contains(topicLower) &&
+                otherKeywords.any { kw -> kw.length >= 4 && Regex("\\b${Regex.escape(kw)}\\b").containsMatchIn(qLower) }
+        }
+        if (hitsUnrelatedDomain) return false
+
+        // 6. Custom subjects not in the preset map pass directly to Llama unless flagged off-topic above
+        if (activeLexicon == null) {
+            return true
+        }
+
+        // 7. Short contextual follow-ups within the active conversation
         val words = qLower.split(Regex("\\s+")).filter { it.isNotBlank() }
-        if (words.size <= 5 && words.any { it in conversationalFollowUps }) {
-            val hitsOther = domainKeywords.any { (otherDomain, otherKeywords) ->
-                !topicLower.contains(otherDomain) && !otherDomain.contains(topicLower) &&
-                    otherKeywords.any { kw -> kw.length >= 4 && Regex("\\b${Regex.escape(kw)}\\b").containsMatchIn(qLower) }
-            }
-            if (!hitsOther) return true
+        if (words.size <= 6 && words.any { it in conversationalFollowUps }) {
+            return true
         }
 
         return false

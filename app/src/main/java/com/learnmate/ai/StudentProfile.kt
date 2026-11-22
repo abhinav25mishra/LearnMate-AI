@@ -9,8 +9,9 @@ import org.json.JSONObject
 
 data class StudentProfile(
     val name: String = "",
+    val email: String = "",
     val standard: String = "Undergraduate / College",
-    val courses: String = "Computer Science & Core Subjects",
+    val courses: String = "Computer Science & Engineering",
     val goal: String = "",
     val subject: String = "Python",
     val skillLevel: String = "Beginner",
@@ -39,11 +40,21 @@ object ProfileStorage {
     private const val KEY_ACTIVE_DATES_PREFIX = "active_dates_"
     private const val KEY_EXPLORED_TOPICS_PREFIX = "explored_topics_"
 
-    fun saveProfile(context: Context, profile: StudentProfile) {
+    fun saveProfile(context: Context, profile: StudentProfile, persistSession: Boolean = true) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val accounts = loadAllAccounts(context).toMutableList()
-        val existingIdx = accounts.indexOfFirst { it.name.equals(profile.name.trim(), ignoreCase = true) }
-        val normalized = profile.copy(name = profile.name.trim())
+        val normalizedEmail = profile.email.trim().ifEmpty {
+            "${profile.name.trim().lowercase().replace(" ", ".")}@vicharax.ai"
+        }
+        val normalizedName = profile.name.trim().ifEmpty {
+            normalizedEmail.substringBefore("@").replaceFirstChar { it.uppercase() }
+        }
+        val normalized = profile.copy(name = normalizedName, email = normalizedEmail)
+
+        val existingIdx = accounts.indexOfFirst {
+            it.email.equals(normalized.email, ignoreCase = true) ||
+                it.name.equals(normalized.name, ignoreCase = true)
+        }
         if (existingIdx >= 0) {
             accounts[existingIdx] = normalized
         } else {
@@ -54,6 +65,7 @@ object ProfileStorage {
         accounts.forEach { acc ->
             arr.put(JSONObject().apply {
                 put("name", acc.name)
+                put("email", acc.email)
                 put("standard", acc.standard)
                 put("courses", acc.courses)
                 put("goal", acc.goal)
@@ -68,10 +80,11 @@ object ProfileStorage {
             })
         }
 
-        prefs.edit()
-            .putString(KEY_ACCOUNTS, arr.toString())
-            .putString(KEY_ACTIVE_USER, normalized.name)
-            .apply()
+        val editor = prefs.edit().putString(KEY_ACCOUNTS, arr.toString())
+        if (persistSession) {
+            editor.putString(KEY_ACTIVE_USER, normalized.email)
+        }
+        editor.apply()
 
         recordActivityToday(context, normalized.name)
     }
@@ -84,9 +97,14 @@ object ProfileStorage {
             val list = mutableListOf<StudentProfile>()
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
+                val name = obj.optString("name", "")
+                val email = obj.optString("email", "").ifEmpty {
+                    "${name.lowercase().replace(" ", ".")}@vicharax.ai"
+                }
                 list.add(
                     StudentProfile(
-                        name = obj.optString("name", ""),
+                        name = name,
+                        email = email,
                         standard = obj.optString("standard", "Undergraduate / College"),
                         courses = obj.optString("courses", "Core Curriculum"),
                         goal = obj.optString("goal", ""),
@@ -109,22 +127,36 @@ object ProfileStorage {
 
     fun loadProfile(context: Context): StudentProfile? {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val activeName = prefs.getString(KEY_ACTIVE_USER, null) ?: return null
-        return loadAllAccounts(context).firstOrNull { it.name.equals(activeName, ignoreCase = true) }
-    }
-
-    fun verifyCredentials(context: Context, name: String, passcode: String): StudentProfile? {
+        val activeKey = prefs.getString(KEY_ACTIVE_USER, null) ?: return null
         return loadAllAccounts(context).firstOrNull {
-            it.name.equals(name.trim(), ignoreCase = true) && it.passcode == passcode.trim()
+            it.email.equals(activeKey, ignoreCase = true) || it.name.equals(activeKey, ignoreCase = true)
         }
     }
 
-    fun signIn(context: Context, name: String, passcode: String): StudentProfile? {
-        val account = verifyCredentials(context, name, passcode) ?: return null
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putString(KEY_ACTIVE_USER, account.name)
-            .apply()
+    fun verifyCredentials(context: Context, identifier: String, password: String): StudentProfile? {
+        val cleanId = identifier.trim()
+        val cleanPass = password.trim()
+        return loadAllAccounts(context).firstOrNull {
+            (it.email.equals(cleanId, ignoreCase = true) || it.name.equals(cleanId, ignoreCase = true)) &&
+                it.passcode == cleanPass
+        }
+    }
+
+    fun findAccountByIdentifier(context: Context, identifier: String): StudentProfile? {
+        val cleanId = identifier.trim()
+        return loadAllAccounts(context).firstOrNull {
+            it.email.equals(cleanId, ignoreCase = true) || it.name.equals(cleanId, ignoreCase = true)
+        }
+    }
+
+    fun signIn(context: Context, identifier: String, password: String, rememberMe: Boolean = true): StudentProfile? {
+        val account = verifyCredentials(context, identifier, password) ?: return null
+        if (rememberMe) {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_ACTIVE_USER, account.email)
+                .apply()
+        }
         recordActivityToday(context, account.name)
         return account
     }

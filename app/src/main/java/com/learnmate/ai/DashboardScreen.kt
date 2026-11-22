@@ -331,7 +331,7 @@ fun DashboardScreen(
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                DashInfoRow("Learner Name", profile.name)
+                DashInfoRow("Learner Name", profile.name)`n                DashInfoRow("Email", profile.email)
                 DashInfoRow("Standard", profile.standard)
                 DashInfoRow("Courses", profile.courses)
                 DashInfoRow("Focus Areas", profile.interests)
