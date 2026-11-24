@@ -6,3 +6,8 @@
 /build
 /app/build
 captures
+
+# VicharaX on-device model weights (excluded from Git)
+*.pte
+*.bin
+
